@@ -29,18 +29,10 @@
       "Bash(gh issue list *)",
       "Bash(gh pr view *)",
       "Bash(gh pr checks *)",
-      "Bash(gh pr create *)"
-    ],
-    "ask": [
-      "Bash(npm install *)",
-      "Bash(npx supabase db push *)",
-      "Bash(npx supabase db reset *)",
-      "Bash(git push *)",
-      "Bash(vercel *)",
-      "Bash(npx vercel *)",
-      "Bash(gh pr merge *)",
-      "Bash(gh issue create *)",
-      "Bash(git merge *)"
+      "Bash(gh pr create *)",
+      "Bash(gh run list *)",
+      "Bash(gh run view *)",
+      "Bash(git branch --show-current)"
     ],
     "deny": [
       "Read(./.env)",
@@ -52,9 +44,31 @@
       "Edit(./.env.production)",
       "Bash(git push --force *)",
       "Bash(git push -f *)"
+    ],
+    "ask": [
+      "Bash(npm install *)",
+      "Bash(npx supabase db push *)",
+      "Bash(npx supabase db reset *)",
+      "Bash(git push *)",
+      "Bash(vercel *)",
+      "Bash(npx vercel *)",
+      "Bash(gh pr merge *)",
+      "Bash(gh issue create *)",
+      "Bash(git merge *)"
     ]
   },
   "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/no-edit-on-main.mjs\""
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
@@ -66,5 +80,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "security-guidance@claude-plugins-official": true
   }
 }
