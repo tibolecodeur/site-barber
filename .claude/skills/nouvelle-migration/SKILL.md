@@ -2,7 +2,7 @@
 name: nouvelle-migration
 description: Créer ou modifier le schéma Supabase (tables, contraintes, RLS, fonctions RPC, storage) de façon sûre et versionnée. À utiliser pour tout changement de base de données.
 argument-hint: <changement à apporter au schéma>
-allowed-tools: Bash(npx supabase migration new *) Read Grep Glob
+allowed-tools: Bash(npx supabase migration new *), Read, Grep, Glob, Write, Edit
 ---
 
 Changement demandé : $ARGUMENTS

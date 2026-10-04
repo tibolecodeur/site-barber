@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Une PR mise à jour annule le run précédent : on ne paie pas deux fois la même vérification.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qualite:
+    name: Lint, types, tests et build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` installe exactement le package-lock.json, sans le modifier.
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Vérification des types
+        run: npm run typecheck
+
+      - name: Tests unitaires et couverture
+        run: npm run test:coverage
+
+      - name: Build de production
+        run: npm run build
+
+  e2e:
+    name: Tests end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # Les navigateurs ne sont pas dans node_modules : il faut les télécharger.
+      - name: Installer Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Tests Playwright
+        run: npm run test:e2e
+
+      - name: Rapport Playwright en cas d'échec
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
