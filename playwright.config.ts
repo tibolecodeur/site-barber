@@ -16,7 +16,9 @@ export default defineConfig({
   projects: [
     {
       name: "mobile",
-      use: { ...devices["Pixel 5"] },
+      // 375 px de large : la cible explicite de CLAUDE.md, et le plus petit écran courant.
+      // On garde un appareil Chromium pour ne dépendre que de ce navigateur en CI.
+      use: { ...devices["Pixel 5"], viewport: { width: 375, height: 812 } },
     },
     {
       name: "desktop",
