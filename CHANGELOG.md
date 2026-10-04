@@ -8,6 +8,8 @@ Ce projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 ### Ajouté
 
 - Socle technique : Vite 8, React 19, TypeScript strict, React Router 8, Tailwind CSS v4.
+  shadcn/ui est installable mais volontairement non initialisé : son preset impose une police
+  et un thème, décision reportée à la phase 3.
 - Outillage de qualité : ESLint (flat config) et Prettier.
 - Tests : Vitest + Testing Library avec couverture (seuil 80 % sur `src/features/` et `src/lib/`),
   Playwright en mobile et desktop.

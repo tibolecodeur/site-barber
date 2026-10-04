@@ -34,6 +34,8 @@ pensé pour le téléphone. Paiement **sur place, en liquide** : aucun paiement 
 | Qualité                         | **ESLint** + **Prettier**            | Règles et formatage homogènes                                       |
 | Hébergement                     | **Vercel**                           | Déploiement à chaque push, offre gratuite                           |
 
+shadcn/ui n'est pas encore initialisé : son CLI impose de choisir un preset qui embarque une
+police, un jeu d'icônes et un thème. Cette décision appartient à la phase 3 (identité visuelle).
 Aucune librairie d'animation ou de 3D n'est installée : ce choix est reporté à la phase 7.
 Voir [`docs/adr/0001-choix-de-la-stack.md`](docs/adr/0001-choix-de-la-stack.md) pour le détail
 des alternatives écartées.
