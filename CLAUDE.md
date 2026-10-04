@@ -1,0 +1,86 @@
+# Site barber — réservations + vitrine
+
+Site pour un barber étudiant : les clients réservent un créneau sans compte, le barber publie
+SES disponibilités et ses créations depuis un espace admin utilisable sur mobile.
+Cahier des charges complet : @docs/SPEC.md
+Phases et avancement : `docs/PLAN.md` (à lire au début de chaque session de travail).
+Décisions de design validées : @docs/DESIGN.md
+
+## Contexte développeur
+- Je (Thibault) apprends React et Vite avec ce projet. Je connais bien PHP/Symfony, MySQL, Java.
+- Explique tes choix React (hooks, état, effets, rendu) avec des comparaisons PHP/Java quand c'est utile.
+- Code et commentaires en français, noms de variables et fonctions en anglais.
+
+## Stack
+- Vite + React 19 + TypeScript (strict) · React Router
+- Tailwind CSS v4 (plugin `@tailwindcss/vite`) + shadcn/ui
+- Librairies d'animation / 3D : AUCUNE pour l'instant. Elles seront choisies plus tard dans une consigne dédiée.
+- Supabase : PostgreSQL, Auth (compte admin unique), Storage (photos), Edge Functions (emails)
+- Validation : Zod (+ react-hook-form pour les formulaires) · Dates : date-fns (locale fr)
+- Tests : Vitest + Testing Library (unitaires et composants), Playwright (end-to-end),
+  tests SQL de la base (pgTAP via `supabase test db`)
+- Hébergement : Vercel (SPA avec rewrite vers index.html) · CI : GitHub Actions
+
+## Commandes
+- `npm run dev` — serveur local (http://localhost:5173)
+- `npm run build` — build de prod (lance aussi `tsc -b`)
+- `npm run lint` · `npm run typecheck` · `npm run test` · `npm run test:coverage` · `npm run test:e2e`
+- `npx supabase migration new <nom>` — nouvelle migration SQL (dossier `supabase/migrations/`)
+- `npx supabase test db` — tests SQL (dossier `supabase/tests/`)
+
+## Méthode projet (comme en entreprise)
+- **Git** : jamais de travail direct sur `main`. Une branche par consigne :
+  `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`. Commits au format Conventional Commits
+  (`feat(booking): …`). Fusion dans `main` via Pull Request GitHub, après CI verte et ma validation.
+- **Tests obligatoires** : toute logique (calcul de créneaux, validation, dates) a des tests
+  unitaires ; tout parcours utilisateur a un test e2e ; toute règle de sécurité SQL a un test pgTAP
+  (y compris « l'anonyme ne peut pas… »). Objectif de couverture : 80 % sur `src/features/` et `src/lib/`.
+- **CI** (`.github/workflows/ci.yml`) : lint, typecheck, tests unitaires + couverture, build, e2e.
+  Une PR ne se fusionne pas si la CI est rouge.
+- **Documentation** : `README.md` à jour (présentation, stack, installation, scripts, architecture,
+  captures). Chaque choix technique important = un ADR court dans `docs/adr/` (contexte, décision,
+  alternatives, conséquences). `CHANGELOG.md` mis à jour à chaque version.
+- **Suivi** : chaque consigne correspond à une issue GitHub ; la PR la référence (`Closes #n`).
+
+## Architecture
+- `src/pages/` pages (routes) · `src/components/` composants réutilisables · `src/components/ui/` shadcn
+- `src/features/booking/`, `src/features/admin/`, `src/features/gallery/` : logique par fonctionnalité
+- `src/lib/supabase.ts` : client Supabase unique · `src/lib/schemas.ts` : schémas Zod partagés
+- `supabase/migrations/` : TOUTE modification du schéma passe par une migration versionnée
+
+## Règles métier (non négociables)
+- Fuseau : tout est stocké en `timestamptz`, affiché en Europe/Paris.
+- Un créneau ne peut JAMAIS être réservé deux fois : contrainte d'exclusion PostgreSQL
+  (`btree_gist`, `tstzrange(starts_at, ends_at)`) sur les réservations confirmées. Le front ne suffit pas.
+- Une réservation doit tomber entièrement dans une disponibilité publiée par le barber.
+- Client sans compte : prénom, nom, téléphone et/ou email. Rien d'autre (minimisation RGPD).
+- Paiement sur place en liquide : aucun paiement en ligne.
+- Annulation client via un lien contenant un `cancel_token` (uuid aléatoire), jamais via l'id.
+
+## Sécurité (Supabase)
+- RLS activé sur TOUTES les tables, sans exception.
+- Le public (anon) ne lit JAMAIS la table des réservations. Il passe uniquement par des fonctions RPC
+  `security definer` : `get_available_slots`, `create_booking`, `cancel_booking` (validation complète côté SQL).
+- Admin = utilisateur listé dans la table `admins`. Inscriptions publiques désactivées dans Supabase Auth.
+- Seule la clé `anon` va dans le front (`VITE_SUPABASE_ANON_KEY`). La clé `service_role` n'apparaît
+  jamais dans `src/` ni dans un commit.
+- Anti-spam sur le formulaire : champ honeypot + limite de réservations par téléphone/email.
+
+## Design
+- C'est MOI qui décide du style (couleurs, typographies, ambiance, animations). Les décisions
+  arrivent phase par phase et sont consignées dans `docs/DESIGN.md` au fur et à mesure.
+- Tant qu'une décision n'y figure pas : style neutre et sobre, sans animation. N'invente pas
+  d'identité visuelle, ne choisis pas de palette ou de police de toi-même.
+- Toujours : mobile d'abord (vérifier à 375 px puis desktop), accessibilité (contrastes AA,
+  focus visible, labels, navigation clavier), images en `loading="lazy"`, et toute animation
+  désactivée si `prefers-reduced-motion`.
+
+## Façon de travailler
+- Fais uniquement ce que la consigne du moment demande. Pas de fonctionnalité, de page ou de
+  librairie en plus sans me demander.
+- Si une information manque pour avancer, pose-moi la question au lieu d'inventer.
+- Une fonctionnalité à la fois, en suivant la skill `/nouvelle-feature`.
+- Pour tout changement du schéma ou de la sécurité : mode plan d'abord, puis agent `relecteur-securite`.
+- Avant de dire « c'est fini » : build + lint + tests passent. Sinon ce n'est pas fini.
+- Ne jamais modifier `.env*` (sauf `.env.example`) ni pousser sur git sans me demander.
+- Mettre à jour les cases de `docs/PLAN.md` quand une étape est terminée.

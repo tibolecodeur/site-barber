@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+.env.production
+.claude/settings.local.json
+test-results
+playwright-report
+.vercel
+.DS_Store
+setup-windows.ps1
