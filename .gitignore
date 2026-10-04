@@ -5,6 +5,7 @@ dist
 .env.*.local
 .env.production
 .claude/settings.local.json
+coverage
 test-results
 playwright-report
 .vercel
