@@ -14,7 +14,7 @@ begin
   end loop;
 end $$;
 
-select plan(21);
+select plan(22);
 
 truncate public.bookings, public.availabilities, public.locations, public.services,
          public.gallery_items, public.admins;
@@ -154,6 +154,11 @@ select throws_ok(
       ((now() at time zone 'Europe/Paris')::date + 2 + time '15:00') at time zone 'Europe/Paris',
       'Zoé', 'Bernard', '0700000002', '  ZOE@Example.TEST ')$$,
   'P0001', 'limit_reached', '3e RDV futur avec le même email (casse différente) : refusé');
+select throws_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '15:00') at time zone 'Europe/Paris',
+      'Zoé', 'Bernard', '0700000003', 'zoe+alias@example.test')$$,
+  'P0001', 'limit_reached', '3e RDV futur avec un alias « +… » du même email : refusé');
 
 -- ---------------------------------------------------------------------------
 -- Vérifications en base (en tant que postgres).

@@ -220,8 +220,11 @@ begin
   if v_phone is not null then
     perform pg_advisory_xact_lock(hashtextextended('booking:phone:' || v_phone, 0));
   end if;
+  --    Pour l'email, on compare sans le suffixe « +… » (zoe+1@x.fr = zoe@x.fr) : sinon un
+  --    alias suffirait à contourner la limite. L'email est stocké tel que saisi.
   if v_email is not null then
-    perform pg_advisory_xact_lock(hashtextextended('booking:email:' || v_email, 0));
+    perform pg_advisory_xact_lock(hashtextextended(
+      'booking:email:' || regexp_replace(v_email, '\+[^@]*@', '@'), 0));
   end if;
 
   select count(*) into v_count
@@ -229,7 +232,9 @@ begin
    where b.status = 'confirmed'
      and b.starts_at > now()
      and ((v_phone is not null and b.phone = v_phone)
-          or (v_email is not null and b.email = v_email));
+          or (v_email is not null
+              and regexp_replace(b.email, '\+[^@]*@', '@')
+                  = regexp_replace(v_email, '\+[^@]*@', '@')));
   if v_count >= v_cfg.max_future_bookings then
     raise exception 'limit_reached' using errcode = 'P0001';
   end if;
