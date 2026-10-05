@@ -54,6 +54,10 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 - [ ] `/check-deploiement` · Données de test supprimées · Compte admin du barber · Domaine
 - [ ] **Purge RGPD codée et planifiée** : suppression des données clients 6 mois après le RDV
       (`private.settings().data_retention`). **Bloquant pour la mise en ligne** (ADR 0002).
+- [ ] **Protéger l'adresse privée** : la révéler tard (ex. quelques heures avant le RDV) ou après
+      validation de la réservation par le barber. Aujourd'hui `create_booking` la renvoie tout de
+      suite : n'importe qui peut l'obtenir en réservant avec un contact inventé puis en annulant
+      (risque n° 1 de l'ADR 0002). **Bloquant pour la mise en ligne.**
 
 ## V2
 

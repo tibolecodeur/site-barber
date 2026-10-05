@@ -89,6 +89,8 @@ pour qu'il ne dépende ni du changement d'heure ni du fuseau de la session.
    script qui invente des numéros peut donc remplir les créneaux, et aussi obtenir les adresses
    privées en réservant puis en annulant. Parade prévue : **Cloudflare Turnstile en V2**, plus,
    au besoin, une limite globale (ex. N réservations par heure) à ajouter dans `settings()`.
+   **Protéger l'adresse privée est bloquant pour la mise en ligne** : il faudra la révéler tard,
+   ou après validation par le barber (case dédiée en phase 8 de `docs/PLAN.md`).
 2. **La purge RGPD n'est pas codée.** Les données clients doivent être supprimées 6 mois après le
    RDV, et `private.settings().data_retention` documente cette durée. **La purge DOIT être codée
    avant la mise en ligne** (case dédiée en phase 8 de `docs/PLAN.md`).
