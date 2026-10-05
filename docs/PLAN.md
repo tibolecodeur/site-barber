@@ -18,9 +18,13 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 ## Phase 2 — Base de données et sécurité
 
 - [ ] Projet Supabase (dev) relié
-- [ ] Tables, contrainte anti-double-réservation, RLS
-- [ ] Fonctions RPC : créneaux libres, réserver, annuler
-- [ ] Tests pgTAP (dont accès interdits) + revue `relecteur-securite`
+      _(CLI installée, `supabase init` fait, MCP en lecture seule ; `supabase login` / `link`
+      et `db push` à faire à la main)_
+- [x] Tables, contrainte anti-double-réservation (tous lieux), RLS, lieux à adresse privée
+- [x] Fonctions RPC : créneaux libres, réserver, consulter, annuler · bucket Storage galerie
+- [x] Tests pgTAP (dont accès interdits et changement d'heure) + job CI + revue `relecteur-securite`
+- [ ] Règles par défaut confirmées avec le barber (60 min, 2 h, 4 semaines, annulation 2 h,
+      2 RDV futurs, conservation 6 mois)
 
 ## Phase 3 — Identité visuelle
 
@@ -48,6 +52,12 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 
 - [ ] Version 1.0.0 : tag Git, CHANGELOG, README avec captures
 - [ ] `/check-deploiement` · Données de test supprimées · Compte admin du barber · Domaine
+- [ ] **Purge RGPD codée et planifiée** : suppression des données clients 6 mois après le RDV
+      (`private.settings().data_retention`). **Bloquant pour la mise en ligne** (ADR 0002).
+- [ ] **Protéger l'adresse privée** : la révéler tard (ex. quelques heures avant le RDV) ou après
+      validation de la réservation par le barber. Aujourd'hui `create_booking` la renvoie tout de
+      suite : n'importe qui peut l'obtenir en réservant avec un contact inventé puis en annulant
+      (risque n° 1 de l'ADR 0002). **Bloquant pour la mise en ligne.**
 
 ## V2
 

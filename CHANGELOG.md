@@ -19,8 +19,26 @@ Ce projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
 - Intégration continue GitHub Actions : lint, types, couverture, build, end-to-end.
 - Modèle de pull request, `vercel.json` pour le routage SPA, ADR 0001 sur le choix de la stack.
 - Garde-fou de développement : hook Claude Code interdisant d'éditer des fichiers sur `main`.
+- Base de données Supabase (phase 2) :
+  - CLI Supabase en devDependency, configuration locale alignée sur le projet distant
+    (inscriptions fermées, aucune table exposée par défaut, mot de passe robuste) ;
+  - tables `services`, `locations`, `availabilities`, `bookings`, `gallery_items`, `admins` ;
+  - aucune double réservation ni dispo qui se chevauche, tous lieux confondus (contraintes
+    d'exclusion) ; RDV entièrement dans une dispo du même lieu ; fin du RDV calculée par la base ;
+  - RLS sur toutes les tables et droits explicites : le public ne lit que les prestations actives
+    et les photos publiées ;
+  - fonctions `get_available_slots`, `create_booking`, `get_booking`, `cancel_booking` ;
+    l'adresse privée du lieu n'est révélée qu'à la personne qui a réservé ;
+  - anti-spam : honeypot, 2 RDV futurs maximum par téléphone ou email ;
+  - règles par défaut (à confirmer) centralisées dans `private.settings()` ;
+  - bucket Storage `gallery` (lecture publique, écriture admin) ;
+  - `seed.sql` avec des adresses factices ;
+  - tests pgTAP (accès interdits, chevauchements, délais, tokens, changement d'heure, Storage)
+    et job CI dédié ;
+  - ADR 0002 (modèle de données, sécurité, confidentialité de l'adresse).
+- Documentation des contraintes mobiles, iOS / Android et des navigateurs supportés.
 
 ### À venir
 
-Base de données et sécurité (phase 2), puis identité visuelle (phase 3).
+Identité visuelle (phase 3).
 Voir [`docs/PLAN.md`](docs/PLAN.md).

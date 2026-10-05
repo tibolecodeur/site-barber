@@ -37,6 +37,30 @@ jobs:
       - name: Build de production
         run: npm run build
 
+  base-de-donnees:
+    name: Tests SQL (pgTAP)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Installe la CLI Supabase à la version figée dans package-lock.json (devDependency).
+      - run: npm ci
+
+      # Postgres seul (Docker est fourni par le runner) : la CLI y applique aussi les schémas
+      # auth et storage (auth.users, storage.objects) utilisés par les tests, puis nos
+      # migrations et seed.sql. Vérifié : identique à un `supabase start` complet pour nos
+      # tests, en bien plus rapide.
+      - name: Démarrer la base locale
+        run: npx supabase db start
+
+      - name: Tests pgTAP
+        run: npx supabase test db
+
   e2e:
     name: Tests end-to-end
     runs-on: ubuntu-latest

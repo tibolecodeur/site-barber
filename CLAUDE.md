@@ -7,11 +7,13 @@ Phases et avancement : `docs/PLAN.md` (à lire au début de chaque session de tr
 Décisions de design validées : @docs/DESIGN.md
 
 ## Contexte développeur
+
 - Je (Thibault) apprends React et Vite avec ce projet. Je connais bien PHP/Symfony, MySQL, Java.
 - Explique tes choix React (hooks, état, effets, rendu) avec des comparaisons PHP/Java quand c'est utile.
 - Code et commentaires en français, noms de variables et fonctions en anglais.
 
 ## Stack
+
 - Vite + React 19 + TypeScript (strict) · React Router
 - Tailwind CSS v4 (plugin `@tailwindcss/vite`) + shadcn/ui
 - Librairies d'animation / 3D : AUCUNE pour l'instant. Elles seront choisies plus tard dans une consigne dédiée.
@@ -22,6 +24,7 @@ Décisions de design validées : @docs/DESIGN.md
 - Hébergement : Vercel (SPA avec rewrite vers index.html) · CI : GitHub Actions
 
 ## Commandes
+
 - `npm run dev` — serveur local (http://localhost:5173)
 - `npm run build` — build de prod (lance aussi `tsc -b`)
 - `npm run lint` · `npm run typecheck` · `npm run test` · `npm run test:coverage` · `npm run test:e2e`
@@ -29,6 +32,7 @@ Décisions de design validées : @docs/DESIGN.md
 - `npx supabase test db` — tests SQL (dossier `supabase/tests/`)
 
 ## Méthode projet (comme en entreprise)
+
 - **Git** : jamais de travail direct sur `main`. Une branche par consigne :
   `feat/…`, `fix/…`, `chore/…`, `docs/…`, `test/…`. Commits au format Conventional Commits
   (`feat(booking): …`). Fusion dans `main` via Pull Request GitHub, après CI verte et ma validation.
@@ -43,12 +47,14 @@ Décisions de design validées : @docs/DESIGN.md
 - **Suivi** : chaque consigne correspond à une issue GitHub ; la PR la référence (`Closes #n`).
 
 ## Architecture
+
 - `src/pages/` pages (routes) · `src/components/` composants réutilisables · `src/components/ui/` shadcn
 - `src/features/booking/`, `src/features/admin/`, `src/features/gallery/` : logique par fonctionnalité
 - `src/lib/supabase.ts` : client Supabase unique · `src/lib/schemas.ts` : schémas Zod partagés
 - `supabase/migrations/` : TOUTE modification du schéma passe par une migration versionnée
 
 ## Règles métier (non négociables)
+
 - Fuseau : tout est stocké en `timestamptz`, affiché en Europe/Paris.
 - Un créneau ne peut JAMAIS être réservé deux fois : contrainte d'exclusion PostgreSQL
   (`btree_gist`, `tstzrange(starts_at, ends_at)`) sur les réservations confirmées. Le front ne suffit pas.
@@ -58,15 +64,21 @@ Décisions de design validées : @docs/DESIGN.md
 - Annulation client via un lien contenant un `cancel_token` (uuid aléatoire), jamais via l'id.
 
 ## Sécurité (Supabase)
+
 - RLS activé sur TOUTES les tables, sans exception.
-- Le public (anon) ne lit JAMAIS la table des réservations. Il passe uniquement par des fonctions RPC
-  `security definer` : `get_available_slots`, `create_booking`, `cancel_booking` (validation complète côté SQL).
+- Le public (anon) ne lit JAMAIS les tables des réservations ni des lieux. Il passe uniquement par
+  des fonctions RPC `security definer` : `get_available_slots`, `create_booking`, `get_booking`,
+  `cancel_booking` (validation complète côté SQL). L'adresse privée d'un lieu n'est visible que
+  par le porteur d'un `cancel_token` (create_booking / get_booking) et par l'admin.
+- Aucun droit implicite : chaque GRANT / REVOKE est écrit dans les migrations. Règles métier
+  réglables (délais, limites) : uniquement dans `private.settings()`.
 - Admin = utilisateur listé dans la table `admins`. Inscriptions publiques désactivées dans Supabase Auth.
 - Seule la clé `anon` va dans le front (`VITE_SUPABASE_ANON_KEY`). La clé `service_role` n'apparaît
   jamais dans `src/` ni dans un commit.
 - Anti-spam sur le formulaire : champ honeypot + limite de réservations par téléphone/email.
 
 ## Design
+
 - C'est MOI qui décide du style (couleurs, typographies, ambiance, animations). Les décisions
   arrivent phase par phase et sont consignées dans `docs/DESIGN.md` au fur et à mesure.
 - Tant qu'une décision n'y figure pas : style neutre et sobre, sans animation. N'invente pas
@@ -75,7 +87,21 @@ Décisions de design validées : @docs/DESIGN.md
   focus visible, labels, navigation clavier), images en `loading="lazy"`, et toute animation
   désactivée si `prefers-reduced-motion`.
 
+## Mobile, iOS et Android (~90 % des visiteurs, client ET admin)
+
+- Conception mobile d'abord, desktop en adaptation secondaire. Zones tactiles ≥ 44 px, actions
+  principales à portée de pouce, RIEN qui dépende du survol (`:hover`), performance 4G.
+- iOS Safari / Android Chrome : `100dvh` et jamais `100vh` ; `env(safe-area-inset-*)` pour tout
+  élément collé en bas ou sur les côtés ; champs de formulaire à 16 px minimum (sinon Safari
+  zoome) ; dates uniquement en ISO via date-fns (Safari refuse certains formats) ; comportement
+  du clavier virtuel vérifié sur chaque formulaire.
+- Animations : `transform` et `opacity` uniquement, pas de flou ni d'ombre animés,
+  `prefers-reduced-motion` respecté, testées sur vrai iPhone et vrai Android.
+- Navigateurs supportés : Safari iOS 16.4+ et Chrome Android récent (limite de Tailwind v4),
+  documentés dans le README.
+
 ## Façon de travailler
+
 - Fais uniquement ce que la consigne du moment demande. Pas de fonctionnalité, de page ou de
   librairie en plus sans me demander.
 - Si une information manque pour avancer, pose-moi la question au lieu d'inventer.
