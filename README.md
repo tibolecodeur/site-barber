@@ -42,12 +42,12 @@ des alternatives écartées.
 
 ## Installation
 
-Prérequis : **Node.js 22+** et npm.
+Prérequis : **Node.js 22+**, npm, et **Docker** (base Supabase locale).
 
 ```bash
 git clone <url-du-depot>
 cd site-barber
-npm install
+npm ci        # installe exactement package-lock.json (dont la CLI Supabase)
 
 # Variables d'environnement : seule la clé « anon » (publique) va ici.
 cp .env.example .env.local
@@ -76,12 +76,50 @@ npm run dev   # http://localhost:5173
 | `npm run test:coverage` | Idem + couverture (seuil 80 % sur `src/features/` et `src/lib/`) |
 | `npm run test:e2e`      | Tests end-to-end Playwright (mobile puis desktop)                |
 
-Base de données :
+Base de données (CLI Supabase installée en devDependency, version figée) :
 
-| Commande                           | Rôle                                   |
-| ---------------------------------- | -------------------------------------- |
-| `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée      |
-| `npx supabase test db`             | Tests pgTAP (dont les accès interdits) |
+| Commande                           | Rôle                                                     |
+| ---------------------------------- | -------------------------------------------------------- |
+| `npx supabase start`               | Lance Supabase en local (Docker), migrations + seed      |
+| `npx supabase db start`            | Postgres seul, plus rapide : suffit pour les tests pgTAP |
+| `npx supabase db reset`            | Recrée la base locale (migrations puis `seed.sql`)       |
+| `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée                        |
+| `npx supabase test db`             | Tests pgTAP (dont les accès interdits)                   |
+| `npx supabase stop`                | Arrête les conteneurs                                    |
+
+## Base de données
+
+Schéma complet et justification : [`docs/adr/0002-modele-de-donnees-et-securite.md`](docs/adr/0002-modele-de-donnees-et-securite.md).
+
+| Table            | Contenu                                       | Accès public (anon)               |
+| ---------------- | --------------------------------------------- | --------------------------------- |
+| `services`       | prestations : nom, durée, prix affiché, actif | lecture des prestations actives   |
+| `locations`      | lieux : libellé public, **adresse privée**    | aucun                             |
+| `availabilities` | plages de disponibilité, chacune dans un lieu | aucun (via `get_available_slots`) |
+| `bookings`       | réservations clients                          | aucun (via les RPC ci-dessous)    |
+| `gallery_items`  | photos de la galerie                          | lecture des photos publiées       |
+| `admins`         | utilisateurs Supabase Auth administrateurs    | aucun                             |
+
+Fonctions RPC publiques (`security definer`, validation complète en SQL) :
+
+| Fonction                                | Rôle                                                            |
+| --------------------------------------- | --------------------------------------------------------------- |
+| `get_available_slots(service_id, jour)` | créneaux libres d'un jour + libellé public du lieu, en un appel |
+| `create_booking(...)`                   | réserve et renvoie le récap (adresse privée, `cancel_token`)    |
+| `get_booking(cancel_token)`             | récap pour le porteur du lien d'annulation                      |
+| `cancel_booking(cancel_token)`          | annule si le délai le permet                                    |
+
+Erreurs renvoyées au front (message de l'exception) : `invalid_input`, `slot_unavailable`,
+`too_soon`, `too_far`, `limit_reached`, `too_late`.
+
+Règles par défaut, **à confirmer avec le barber**, centralisées dans `private.settings()` (une
+migration suffit pour les changer) : créneaux de 60 min, réservation au moins 2 h et au plus
+4 semaines à l'avance, annulation jusqu'à 2 h avant, 2 RDV futurs max par téléphone ou email,
+conservation des données clients 6 mois.
+
+Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, admin,
+chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.
+`supabase/seed.sql` ne contient que des données de développement avec des **adresses factices**.
 
 ## Architecture
 
@@ -100,9 +138,13 @@ src/
 └── test/setup.ts     configuration des tests
 
 e2e/                  tests Playwright
-supabase/migrations/  toute évolution du schéma, versionnée
+supabase/
+├── migrations/       toute évolution du schéma, versionnée
+├── tests/            tests pgTAP (règles SQL, RLS, accès interdits)
+├── seed.sql          données de développement local (adresses factices)
+└── config.toml       configuration de la stack locale
 docs/                 SPEC, PLAN, DESIGN, ADR
-.github/workflows/    CI (lint, types, tests, build, e2e)
+.github/workflows/    CI (lint, types, tests, pgTAP, build, e2e)
 ```
 
 Deux principes :
@@ -114,13 +156,23 @@ Deux principes :
 
 ## Sécurité
 
-- RLS activée sur toutes les tables, sans exception.
-- Le public ne lit jamais la table des réservations : il passe par des fonctions RPC
-  `security definer` (`get_available_slots`, `create_booking`, `cancel_booking`) qui valident tout
-  côté SQL.
+- RLS activée sur toutes les tables, sans exception, et chaque GRANT écrit explicitement.
+- Le public ne lit jamais les réservations ni les lieux : il passe par des fonctions RPC
+  `security definer` (`get_available_slots`, `create_booking`, `get_booking`, `cancel_booking`)
+  qui valident tout côté SQL.
+- L'adresse privée du lieu n'est révélée qu'à la personne qui a réservé (et à l'admin).
 - Annulation par `cancel_token` (uuid aléatoire), jamais par l'identifiant de la réservation.
-- Un créneau ne peut pas être réservé deux fois : contrainte d'exclusion PostgreSQL, et non une
-  vérification côté navigateur.
+- Un créneau ne peut pas être réservé deux fois, tous lieux confondus : contrainte d'exclusion
+  PostgreSQL, et non une vérification côté navigateur.
+- Anti-spam : champ honeypot et 2 RDV futurs maximum par téléphone ou email.
+
+## Navigateurs supportés
+
+Environ 90 % des visiteurs (clients et barber) seront sur téléphone.
+
+- **Safari iOS 16.4+** et **Chrome Android récent** : c'est la limite basse imposée par
+  Tailwind CSS v4 (propriétés CSS modernes comme `@property` et `color-mix()`).
+- Desktop (Chrome, Firefox, Safari, Edge récents) : supporté, en adaptation secondaire.
 
 ## Captures
 
