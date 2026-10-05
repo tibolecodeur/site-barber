@@ -77,7 +77,7 @@ returns table (
   data_retention interval        -- conservation des données clients après le RDV (purge à coder)
 )
 language sql
-immutable
+stable
 set search_path = ''
 as $$
   select

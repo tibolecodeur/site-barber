@@ -14,7 +14,7 @@ begin
   end loop;
 end $$;
 
-select plan(22);
+select plan(32);
 
 truncate public.bookings, public.availabilities, public.locations, public.services,
          public.gallery_items, public.admins;
@@ -161,9 +161,69 @@ select throws_ok(
   'P0001', 'limit_reached', '3e RDV futur avec un alias « +… » du même email : refusé');
 
 -- ---------------------------------------------------------------------------
+-- Caractères invisibles et normalisation du téléphone. Les caractères spéciaux sont écrits
+-- en échappements U&'\XXXX' : jamais de caractère invisible littéral dans ce fichier.
+-- ---------------------------------------------------------------------------
+select throws_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '12:00') at time zone 'Europe/Paris',
+      U&'To\202Em', 'Durand', '0698765432')$$,
+  'P0001', 'invalid_input', 'prénom avec inversion de sens (U+202E) : refusé');
+select throws_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '12:00') at time zone 'Europe/Paris',
+      'Tom', U&'Du\200Brand', '0698765432')$$,
+  'P0001', 'invalid_input', 'nom avec caractère invisible (U+200B) : refusé');
+select throws_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '12:00') at time zone 'Europe/Paris',
+      'Tom', 'Durand', null, U&'zoe\200B@example.test')$$,
+  'P0001', 'invalid_input', 'email avec caractère invisible : refusé (pas de contournement de la limite)');
+select throws_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '12:00') at time zone 'Europe/Paris',
+      'Tom', 'Durand', null, U&'tom\202Etxt.exe@example.test')$$,
+  'P0001', 'invalid_input', 'email avec inversion de sens (U+202E) : refusé');
+select throws_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '12:00') at time zone 'Europe/Paris',
+      'Tom', 'Durand', '+33 06 98 76 54 32')$$,
+  'P0001', 'invalid_input', 'téléphone « +33 0… » : refusé');
+select lives_ok(
+  $$select * from public.create_booking('10000000-0000-4000-8000-000000000001',
+      ((now() at time zone 'Europe/Paris')::date + 2 + time '12:00') at time zone 'Europe/Paris',
+      'Ugo', 'Moreau', '0033 7 11 22 33 44')$$,
+  'téléphone « 0033 7… » : accepté');
+
+-- ---------------------------------------------------------------------------
 -- Vérifications en base (en tant que postgres).
 -- ---------------------------------------------------------------------------
 reset role;
+
+select is(
+  (select phone from public.bookings where first_name = 'Ugo'),
+  '0711223344',
+  '« 0033 7 11 22 33 44 » est stocké « 0711223344 »');
+
+-- Les contraintes de la table protègent aussi les écritures directes (admin).
+select throws_ok(
+  $$insert into public.bookings (service_id, location_id, starts_at, ends_at, first_name, last_name, phone)
+    values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+            ((now() at time zone 'Europe/Paris')::date + 2 + time '15:00') at time zone 'Europe/Paris',
+            now(), 'Tom', 'Durand', '+33698765432')$$,
+  '23514', null, 'écriture directe : téléphone non normalisé (+33…) refusé par la table');
+select throws_ok(
+  $$insert into public.bookings (service_id, location_id, starts_at, ends_at, first_name, last_name, email)
+    values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+            ((now() at time zone 'Europe/Paris')::date + 2 + time '15:00') at time zone 'Europe/Paris',
+            now(), 'Tom', 'Durand', U&'tom\202Etxt.exe@example.test')$$,
+  '23514', null, 'écriture directe : email avec inversion de sens refusé par la table');
+select throws_ok(
+  $$insert into public.bookings (service_id, location_id, starts_at, ends_at, first_name, last_name, phone)
+    values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
+            ((now() at time zone 'Europe/Paris')::date + 2 + time '15:00') at time zone 'Europe/Paris',
+            now(), U&'To\FEFFm', 'Durand', '0698765432')$$,
+  '23514', null, 'écriture directe : prénom avec caractère invisible (U+FEFF) refusé par la table');
 
 select is(
   (select phone from public.bookings where first_name = 'Léa' order by starts_at limit 1),
@@ -175,8 +235,8 @@ select is(
   'le prénom est stocké sans espaces superflus');
 select is(
   (select count(*) from public.bookings),
-  4::bigint,
-  'seules les 4 réservations valides ont été enregistrées');
+  5::bigint,
+  'seules les 5 réservations valides ont été enregistrées');
 
 select * from finish();
 rollback;

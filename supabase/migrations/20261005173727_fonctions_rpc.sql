@@ -172,14 +172,15 @@ begin
   if p_service_id is null
      or p_starts_at is null
      or v_first is null or char_length(v_first) not between 1 and 50
-     or v_first ~ '[[:cntrl:]<>"=​-‏‪-‮⁦-⁩]'
+     or not private.is_safe_text(v_first) or v_first ~ '='
      or v_last is null or char_length(v_last) not between 1 and 50
-     or v_last ~ '[[:cntrl:]<>"=​-‏‪-‮⁦-⁩]'
+     or not private.is_safe_text(v_last) or v_last ~ '='
      or (v_phone is null and v_email is null)
      or (v_phone is not null and (
            v_phone !~ '^(0[1-9][0-9]{8}|\+[1-9][0-9]{7,14})$' or v_phone ~ '^\+33'))
      or (v_email is not null and (
            char_length(v_email) > 254
+           or not private.is_safe_text(v_email)
            or v_email !~ '^[^@[:space:]<>"]+@[^@[:space:]<>"]+\.[^@[:space:]<>"]+$'))
   then
     raise exception 'invalid_input' using errcode = 'P0001';

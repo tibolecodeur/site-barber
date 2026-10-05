@@ -4,6 +4,28 @@
 -- Les droits et la RLS sont posés dans la migration suivante (rls_et_droits).
 -- =============================================================================
 
+-- -----------------------------------------------------------------------------
+-- Texte « sûr » pour les données saisies par les clients. Refuse :
+--   · les caractères de contrôle et le balisage (< > ") ;
+--   · les caractères Unicode invisibles ou qui inversent le sens d'affichage : U+00AD, U+061C,
+--     U+180E, U+200B–U+200F, U+2028–U+202E, U+2060–U+206F, U+FEFF. Ils permettent de
+--     maquiller un nom ou un email, ou de contourner la limite par email.
+-- Écrit avec des échappements U&'\XXXX' : aucun caractère invisible dans ce fichier.
+-- Utilisée par les contraintes de bookings ET par create_booking (une seule définition).
+-- EXECUTE pour authenticated : une contrainte CHECK s'évalue avec les droits de l'auteur de
+-- l'écriture (l'admin, lors d'une écriture directe).
+-- -----------------------------------------------------------------------------
+create or replace function private.is_safe_text(p_text text)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select p_text !~ U&'[[:cntrl:]<>"\00AD\061C\180E\200B-\200F\2028-\202E\2060-\206F\FEFF]';
+$$;
+revoke all on function private.is_safe_text(text) from public, anon, authenticated;
+grant execute on function private.is_safe_text(text) to authenticated;
+
 -- Prestations affichées et réservables.
 create table if not exists public.services (
   id uuid primary key default gen_random_uuid(),
@@ -53,21 +75,22 @@ create table if not exists public.bookings (
   starts_at timestamptz not null,
   -- Toujours recalculé par le trigger bookings_before_write : starts_at + durée.
   ends_at timestamptz not null,
-  -- Noms : ni caractères de contrôle, ni balisage (< > " =), ni caractères Unicode invisibles
-  -- ou d'inversion de sens (U+200B–U+200F, U+202A–U+202E, U+2066–U+2069). Inoffensifs dans
-  -- React, ils deviendraient dangereux dans un email HTML, un export CSV ou un fichier .ics.
+  -- Noms : ni balisage (< > " =), ni caractères de contrôle, invisibles ou d'inversion de
+  -- sens (voir private.is_safe_text). Inoffensifs dans React, ils deviendraient dangereux dans
+  -- un email HTML, un export CSV ou un fichier .ics.
   first_name text not null
     check (first_name = btrim(first_name) and char_length(first_name) between 1 and 50
-           and first_name !~ '[[:cntrl:]<>"=​-‏‪-‮⁦-⁩]'),
+           and private.is_safe_text(first_name) and first_name !~ '='),
   last_name text not null
     check (last_name = btrim(last_name) and char_length(last_name) between 1 and 50
-           and last_name !~ '[[:cntrl:]<>"=​-‏‪-‮⁦-⁩]'),
+           and private.is_safe_text(last_name) and last_name !~ '='),
   -- Téléphone normalisé : français « 0X XX XX XX XX » sans séparateurs, ou international
   -- « +<indicatif><numéro> » (jamais +0…, jamais +33 : converti en 0). Une seule écriture
   -- possible par numéro, ce qui rend fiable la limite anti-abus.
   phone text check (phone ~ '^(0[1-9][0-9]{8}|\+[1-9][0-9]{7,14})$' and phone !~ '^\+33'),
   email text
     check (email = lower(email) and char_length(email) <= 254
+           and private.is_safe_text(email)
            and email ~ '^[^@[:space:]<>"]+@[^@[:space:]<>"]+\.[^@[:space:]<>"]+$'),
   status text not null default 'confirmed' check (status in ('confirmed', 'cancelled')),
   -- Secret du lien d'annulation : uuid v4 aléatoire (122 bits), jamais l'id.

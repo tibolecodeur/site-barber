@@ -95,13 +95,28 @@ pour qu'il ne dépende ni du changement d'heure ni du fuseau de la session.
 3. **Une photo masquée reste accessible par son URL.** Le bucket `gallery` est public, et
    `published = false` masque seulement la ligne. Parades : en phase 6, nommer les fichiers avec
    un uuid aléatoire, et supprimer le fichier, pas seulement la ligne.
+4. **Blocage ciblé d'un client.** En réservant 2 créneaux avec le numéro ou l'email de
+   quelqu'un d'autre, un tiers peut l'empêcher de réserver. `limit_reached` révèle aussi que ce
+   contact a 2 RDV à venir. Parades : Turnstile (V2) et la liste des RDV dans l'admin (phase 6),
+   qui permet au barber de repérer et d'annuler ces réservations.
+5. **Le MCP Supabase lit la base distante.** `read_only=true` empêche l'écriture, pas la lecture
+   (en contournant la RLS). Une fois de vraies données clients en base, une session de debug
+   pourrait faire passer des noms ou des téléphones dans le contexte de l'agent, y compris un
+   texte d'injection saisi comme nom. **Avant la mise en ligne** : retirer la fonctionnalité
+   `database` du MCP, ou le pointer vers un projet de développement sans vraies données.
 
 ## Conséquences
 
 **Positif**
 
-- Les règles critiques sont prouvées par plus de 130 assertions pgTAP, y compris « l'anonyme ne peut
-  pas… », le changement d'heure du 25 octobre 2026 et la concurrence. Ces tests tournent en CI.
+- Les règles critiques sont prouvées par plus de 140 assertions pgTAP, y compris « l'anonyme ne
+  peut pas… » et le changement d'heure du 25 octobre 2026. Ces tests tournent en CI. Les
+  requêtes simultanées sur un même créneau sont couvertes structurellement par la contrainte
+  d'exclusion. En revanche, le verrou consultatif de la limite anti-abus n'est pas testé avec
+  deux sessions réelles (cela demanderait `dblink`).
+- Les caractères invisibles ou d'inversion de sens sont refusés par une seule fonction,
+  `private.is_safe_text()`, utilisée à la fois par les contraintes de table et par
+  `create_booking`.
 - Le local se comporte comme le distant : `auto_expose_new_tables = false`, REVOKE et droits par
   défaut retirés dans la première migration.
 
@@ -115,6 +130,9 @@ pour qu'il ne dépende ni du changement d'heure ni du fuseau de la session.
   la V2 (emails) demanderont des GRANT ciblés.
 - Le compte admin unique donne accès à toutes les données clients. Il faut un mot de passe
   robuste (12 caractères, majuscules, minuscules, chiffres) et une réauthentification pour
-  changer de mot de passe. La MFA (TOTP) est à envisager.
+  changer de mot de passe. La MFA (TOTP) est à envisager. Ces réglages ne sont dans
+  `config.toml` que pour le local : ils sont **à reproduire dans le dashboard** du projet distant.
+- Un nom peut commencer par `+`, `-` ou `@`. Le jour où un export CSV existera, il faudra
+  neutraliser ces valeurs (injection de formule dans un tableur).
 - Côté front (phase 5), le `cancel_token` est dans l'URL de `/annuler`. Il faudra ajouter
   `Referrer-Policy: no-referrer` dans `vercel.json`.
