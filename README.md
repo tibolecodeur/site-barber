@@ -29,7 +29,7 @@ pensé pour le téléphone. Paiement **sur place, en liquide** : aucun paiement 
 | Validation                      | **Zod** + **react-hook-form**        | Un seul schéma pour le formulaire et les données                    |
 | Dates                           | **date-fns** (locale `fr`)           | Manipulation de dates sans fuseau implicite                         |
 | Tests unitaires                 | **Vitest** + **Testing Library**     | Même moteur que Vite, tests de composants                           |
-| Tests end-to-end                | **Playwright**                       | Parcours réels, mobile et desktop                                   |
+| Tests end-to-end                | **Playwright**                       | Parcours réels sur Chromium et WebKit (Safari), mobile et desktop   |
 | Tests SQL                       | **pgTAP**                            | Prouver que l'anonyme ne peut pas lire les réservations             |
 | Qualité                         | **ESLint** + **Prettier**            | Règles et formatage homogènes                                       |
 | Hébergement                     | **Vercel**                           | Déploiement à chaque push, offre gratuite                           |
@@ -54,8 +54,8 @@ cp .env.example .env.local
 # puis renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
 # (Supabase > Project Settings > API)
 
-# Navigateur pour les tests end-to-end
-npx playwright install chromium
+# Navigateurs pour les tests end-to-end (Chromium = Android et desktop, WebKit = iPhone)
+npx playwright install chromium webkit
 
 npm run dev   # http://localhost:5173
 ```
@@ -74,7 +74,7 @@ npm run dev   # http://localhost:5173
 | `npm run typecheck`     | Vérification TypeScript seule                                    |
 | `npm run test`          | Tests unitaires et composants (Vitest)                           |
 | `npm run test:coverage` | Idem + couverture (seuil 80 % sur `src/features/` et `src/lib/`) |
-| `npm run test:e2e`      | Tests end-to-end Playwright (mobile puis desktop)                |
+| `npm run test:e2e`      | Tests end-to-end Playwright (Android, iPhone, desktop)           |
 
 Base de données (CLI Supabase installée en devDependency, version figée) :
 
@@ -143,7 +143,7 @@ supabase/
 ├── tests/            tests pgTAP (règles SQL, RLS, accès interdits)
 ├── seed.sql          données de développement local (adresses factices)
 └── config.toml       configuration de la stack locale
-docs/                 SPEC, PLAN, DESIGN, ADR
+docs/                 SPEC, PLAN, DESIGN, ADR, TESTS-APPAREILS (checklist téléphones)
 .github/workflows/    CI (lint, types, tests, pgTAP, build, e2e)
 ```
 
@@ -165,6 +165,29 @@ Deux principes :
 - Un créneau ne peut pas être réservé deux fois, tous lieux confondus : contrainte d'exclusion
   PostgreSQL, et non une vérification côté navigateur.
 - Anti-spam : champ honeypot et 2 RDV futurs maximum par téléphone ou email.
+
+## Tests end-to-end (Playwright)
+
+Chaque test de `e2e/` tourne sur trois projets (`playwright.config.ts`) :
+
+| Projet           | Moteur   | Simule                                        | Écran      |
+| ---------------- | -------- | --------------------------------------------- | ---------- |
+| `mobile-android` | Chromium | Chrome Android (profil Pixel 5)               | 375 × 812  |
+| `mobile-iphone`  | WebKit   | Safari iOS (profil iPhone 17, user agent iOS) | 375 × 812  |
+| `desktop`        | Chromium | Chrome sur ordinateur                         | 1280 × 800 |
+
+```bash
+npm run test:e2e                              # les trois projets
+npx playwright test --project=mobile-iphone   # un seul projet
+```
+
+**Ce que WebKit couvre** : le moteur de rendu et le moteur JavaScript de Safari (CSS, `Date`,
+formulaires, comportements propres à WebKit), l'écran tactile et la taille d'un iPhone.
+**Ce qu'il ne couvre pas** : ce n'est pas Safari iOS mais WebKit compilé pour Windows / Linux.
+Pas de vrai clavier virtuel, pas d'encoche ni de zones sûres, pas de barre d'adresse qui se
+replie, pas de réseau mobile, pas d'économie d'énergie. Il **ne remplace pas un vrai iPhone** :
+la checklist [`docs/TESTS-APPAREILS.md`](docs/TESTS-APPAREILS.md) se refait à la main sur un
+vrai iPhone et un vrai Android avant chaque mise en ligne.
 
 ## Navigateurs supportés
 

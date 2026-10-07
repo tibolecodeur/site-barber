@@ -74,9 +74,28 @@ jobs:
 
       - run: npm ci
 
-      # Les navigateurs ne sont pas dans node_modules : il faut les télécharger.
-      - name: Installer Chromium
-        run: npx playwright install --with-deps chromium
+      # Les navigateurs ne sont pas dans node_modules : il faut les télécharger. Chromium sert aux
+      # projets Android et desktop, WebKit au projet iPhone. Les binaires sont mis en cache
+      # (clé = version de Playwright, chaque version attend ses propres navigateurs) ; les
+      # bibliothèques système (apt) ne se cachent pas et sont réinstallées à chaque run.
+      - name: Version de Playwright
+        id: playwright
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Cache des navigateurs Playwright
+        id: cache-navigateurs
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}-chromium-webkit
+
+      - name: Installer Chromium et WebKit
+        if: steps.cache-navigateurs.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium webkit
+
+      - name: Installer les dépendances système des navigateurs
+        if: steps.cache-navigateurs.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium webkit
 
       - name: Tests Playwright
         run: npm run test:e2e
