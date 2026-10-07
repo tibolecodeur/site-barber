@@ -33,3 +33,9 @@ dist-ssr
 
 # Captures et instantanés du serveur MCP Playwright (agents de test)
 .playwright-mcp/
+
+# Impeccable : outil local (contient un binaire), à réinstaller avec `npx impeccable install`
+.claude/skills/impeccable/
+.agents/skills/impeccable/
+.claude/agents/impeccable-*.md
+.impeccable/
