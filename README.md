@@ -121,11 +121,29 @@ Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, a
 chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.
 `supabase/seed.sql` ne contient que des données de développement avec des **adresses factices**.
 
+## Routes
+
+Squelette en place : structure et textes provisoires, sans style ni appel à la base.
+
+| Route                        | Page                                                                                 |
+| ---------------------------- | ------------------------------------------------------------------------------------ |
+| `/`                          | Accueil, une seule longue page : `#accueil`, `#prestations`, `#galerie`, `#reserver` |
+| `/reserver`                  | Parcours de réservation (prestation, jour, créneau, coordonnées, consentement)       |
+| `/annuler`                   | Annulation via le lien personnel (`?token=…`)                                        |
+| `/admin`                     | Connexion de l'espace admin                                                          |
+| `/mentions-legales`          | Mentions légales                                                                     |
+| `/politique-confidentialite` | Politique de confidentialité                                                         |
+| toute autre URL              | Page 404                                                                             |
+
+Prestations et galerie ne sont pas des routes : ce sont des sections de l'accueil, accessibles
+par les ancres du menu (`/#prestations`, `/#galerie`). L'espace admin n'apparaît pas dans le menu
+public.
+
 ## Architecture
 
 ```
 src/
-├── pages/            une page par route (Accueil, Prestations, Galerie…)
+├── pages/            une page par route (Accueil, Réserver, Admin…)
 ├── components/       composants réutilisables
 │   └── ui/           composants shadcn/ui (code copié, modifiable)
 ├── features/         logique métier, par fonctionnalité
@@ -180,6 +198,10 @@ Chaque test de `e2e/` tourne sur trois projets (`playwright.config.ts`) :
 npm run test:e2e                              # les trois projets
 npx playwright test --project=mobile-iphone   # un seul projet
 ```
+
+`e2e/accessibilite.spec.ts` passe chaque route à **axe** (`@axe-core/playwright`, règles WCAG
+A/AA) : il détecte les erreurs mécaniques (label manquant, titres sautés, lien sans nom), pas
+tout. La navigation au clavier et la lecture d'écran se vérifient encore à la main.
 
 **Ce que WebKit couvre** : le moteur de rendu et le moteur JavaScript de Safari (CSS, `Date`,
 formulaires, comportements propres à WebKit), l'écran tactile et la taille d'un iPhone.

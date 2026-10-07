@@ -33,12 +33,25 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 
 ## Phase 4 — Vitrine
 
+- [x] Squelette des pages : structure HTML, textes provisoires, sans style ni base
+      (accueil à sections, /reserver, /annuler, /admin, pages légales, 404), tests e2e et axe
 - [ ] Accueil · Prestations · Galerie · Contact · Pages légales
+      _(structure en place ; restent le style, les vraies données, les photos, la section
+      contact et la rédaction des pages légales)_
 
 ## Phase 5 — Réservation client
 
 - [ ] Parcours complet · Confirmation + .ics + lien d'annulation · Page d'annulation
 - [ ] Tests Playwright mobile
+- [ ] **`<meta name="robots" content="noindex">` sur `/admin`, `/annuler` et la 404**
+      (prop à ajouter à `PageMeta`). **À faire avant la mise en ligne de la réservation.**
+- [ ] **`referrer: no-referrer` sur `/annuler`** : l'URL contient le `cancel_token`, il ne doit
+      pas partir vers un autre site via l'en-tête Referer (balise meta et/ou en-tête HTTP dans
+      `vercel.json`). **À faire avant la mise en ligne de la réservation.**
+- [ ] Formulaire : `required` (ou équivalent via Zod / react-hook-form) et zones `aria-live`
+      pour les créneaux, les erreurs et la confirmation _(reporté depuis le squelette des pages)_
+- [ ] Accessibilité : déplacer le focus (h1 ou `main`) après un changement de page, pour que
+      les lecteurs d'écran l'annoncent _(reporté depuis le squelette des pages)_
 
 ## Phase 6 — Espace admin
 

@@ -16,20 +16,25 @@ function renderAt(route: string) {
 }
 
 describe("NavMenu", () => {
-  it("affiche un lien vers chaque page publique", () => {
+  it("affiche les ancres de l'accueil puis le lien vers /reserver, dans cet ordre", () => {
     renderAt("/");
 
     const attendus = [
-      { nom: "Accueil", href: "/" },
-      { nom: "Prestations", href: "/prestations" },
-      { nom: "Galerie", href: "/galerie" },
+      { nom: "Prestations", href: "/#prestations" },
+      { nom: "Galerie", href: "/#galerie" },
+      { nom: "Comment réserver", href: "/#reserver" },
       { nom: "Réserver", href: "/reserver" },
-      { nom: "Admin", href: "/admin" },
     ];
+    const liens = screen.getAllByRole("link");
+    expect(liens.map((lien) => lien.textContent)).toEqual(attendus.map((a) => a.nom));
     for (const { nom, href } of attendus) {
       expect(screen.getByRole("link", { name: nom })).toHaveAttribute("href", href);
     }
-    expect(screen.getAllByRole("link")).toHaveLength(attendus.length);
+  });
+
+  it("ne propose pas l'espace admin dans le menu public", () => {
+    renderAt("/");
+    expect(screen.queryByRole("link", { name: /admin/i })).not.toBeInTheDocument();
   });
 
   it("est accessible : une navigation nommée", () => {
@@ -37,21 +42,16 @@ describe("NavMenu", () => {
     expect(screen.getByRole("navigation", { name: "Navigation principale" })).toBeInTheDocument();
   });
 
-  it("marque la page courante avec aria-current", () => {
-    renderAt("/galerie");
-
-    expect(screen.getByRole("link", { name: "Galerie" })).toHaveAttribute("aria-current", "page");
-    expect(screen.getByRole("link", { name: "Accueil" })).not.toHaveAttribute("aria-current");
+  it("marque « Réserver » avec aria-current sur /reserver", () => {
+    renderAt("/reserver");
+    expect(screen.getByRole("link", { name: "Réserver" })).toHaveAttribute("aria-current", "page");
   });
 
-  it("ne marque pas Accueil comme actif sur une autre page (grâce à `end`)", () => {
-    renderAt("/prestations");
+  it("ne marque aucune ancre comme active sur l'accueil (elles pointent toutes vers /)", () => {
+    renderAt("/#galerie");
 
-    // Sans `end`, le chemin "/" correspondrait à toutes les URL : piège classique de NavLink.
-    expect(screen.getByRole("link", { name: "Accueil" })).not.toHaveAttribute("aria-current");
-    expect(screen.getByRole("link", { name: "Prestations" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    for (const nom of ["Prestations", "Galerie", "Comment réserver", "Réserver"]) {
+      expect(screen.getByRole("link", { name: nom })).not.toHaveAttribute("aria-current");
+    }
   });
 });
