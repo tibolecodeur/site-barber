@@ -28,6 +28,11 @@ Décisions de design validées : @docs/DESIGN.md
 - `npm run dev` — serveur local (http://localhost:5173)
 - `npm run build` — build de prod (lance aussi `tsc -b`)
 - `npm run lint` · `npm run typecheck` · `npm run test` · `npm run test:coverage` · `npm run test:e2e`
+- e2e : 3 projets Playwright, `mobile-android` (Chromium), `mobile-iphone` (WebKit, profil iPhone
+  à 375 px) et `desktop` (Chromium) ; un seul : `npx playwright test --project=mobile-iphone`.
+  WebKit simule Safari (moteur, CSS, JS) mais ne remplace pas un vrai iPhone (clavier virtuel,
+  encoche, barre d'adresse, réseau) : checklist manuelle `docs/TESTS-APPAREILS.md` avant
+  chaque mise en ligne.
 - `npx supabase migration new <nom>` — nouvelle migration SQL (dossier `supabase/migrations/`)
 - `npx supabase test db` — tests SQL (dossier `supabase/tests/`)
 
