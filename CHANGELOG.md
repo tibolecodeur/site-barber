@@ -37,6 +37,29 @@ Ce projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
     et job CI dédié ;
   - ADR 0002 (modèle de données, sécurité, confidentialité de l'adresse).
 - Documentation des contraintes mobiles, iOS / Android et des navigateurs supportés.
+- Squelette des pages, sans style (structure et textes provisoires) :
+  - accueil en une longue page avec sections ancrées (`#accueil`, `#prestations`, `#galerie`,
+    `#reserver`), emplacements réservés pour la photo du barber et 6 photos de galerie ;
+  - prestations provisoires dans un seul fichier (`src/features/booking/provisionalServices.ts`),
+    prix « À confirmer » ;
+  - pages `/reserver` (formulaire en 6 étapes, sans envoi), `/annuler`, `/admin` (connexion,
+    sans logique), `/mentions-legales`, `/politique-confidentialite`, 404 ;
+  - HTML sémantique et accessible : lien d'évitement, un seul h1 par page, titre d'onglet et
+    meta description par page, labels et `autocomplete` sur chaque champ, `aria-current` ;
+  - ergonomie mobile minimale : zones tactiles de 44 px, champs à 16 px, `100dvh`, zones sûres ;
+  - tests e2e (titres, ordre des sections, ancres, labels, débordement à 375 px) et audit
+    d'accessibilité automatique avec `@axe-core/playwright` sur chaque route.
+- Intentions de design (non appliquées) consignées dans `docs/DESIGN.md`.
+
+### Modifié
+
+- Nom affiché du site : CutsByAlix.
+- Menu : ancres vers les sections de l'accueil et lien « Réserver » ; le lien « Admin » n'est plus
+  dans le menu public.
+
+### Supprimé
+
+- Routes `/prestations` et `/galerie` : remplacées par des sections de l'accueil.
 
 ### À venir
 

@@ -33,7 +33,11 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 
 ## Phase 4 — Vitrine
 
+- [x] Squelette des pages : structure HTML, textes provisoires, sans style ni base
+      (accueil à sections, /reserver, /annuler, /admin, pages légales, 404), tests e2e et axe
 - [ ] Accueil · Prestations · Galerie · Contact · Pages légales
+      _(structure en place ; restent le style, les vraies données, les photos, la section
+      contact et la rédaction des pages légales)_
 
 ## Phase 5 — Réservation client
 

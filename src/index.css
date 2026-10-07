@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+/*
+ * Squelette : uniquement des règles de lisibilité et d'ergonomie mobile.
+ * Ni couleur, ni police, ni ombre, ni arrondi, ni transition (voir docs/DESIGN.md).
+ */
+@layer base {
+  /* Safari iOS zoome sur tout champ dont le texte fait moins de 16 px. */
+  input,
+  select,
+  textarea,
+  button {
+    font-size: max(1rem, 16px);
+  }
+
+  /* Zones tactiles d'au moins 44 px. La remise à zéro de Tailwind (preflight) retire aussi
+     les bordures : on rend un simple contour aux champs pour qu'ils restent repérables. */
+  input:not([type="checkbox"], [type="radio"]),
+  select,
+  textarea {
+    min-height: 2.75rem;
+    border-width: 1px;
+    padding-inline: 0.5rem;
+  }
+}
