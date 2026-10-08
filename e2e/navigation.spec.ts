@@ -52,6 +52,8 @@ for (const { chemin, h1, onglet } of PAGES) {
 
 test("l'accueil contient les sections dans l'ordre attendu", async ({ page }) => {
   await page.goto("/");
+  // Attente explicite du rendu : `evaluateAll` lit le DOM tel quel, sans attendre.
+  await expect(page.locator("main section[id]")).toHaveCount(4);
 
   const ids = await page
     .locator("main section[id]")
@@ -70,17 +72,23 @@ test("l'accueil affiche les deux prestations sans prix inventé", async ({ page 
   await expect(prestations.getByText("Prix : À confirmer")).toHaveCount(2);
 });
 
-/** Sur mobile, les liens sont dans un menu replié : on l'ouvre s'il y a un bouton « Menu ». */
+/**
+ * Sur mobile (sous 768 px, le point de rupture `md`), les liens sont dans un menu replié :
+ * on l'ouvre. La décision vient de la largeur d'écran, connue d'avance, et non d'un
+ * `isVisible()` instantané : sur un serveur froid, React n'a pas encore affiché le bouton à
+ * cet instant, le menu restait fermé et le clic suivant attendait 30 s (test fragile).
+ */
 async function ouvrirMenuSiReplie(page: Page) {
+  if (page.viewportSize()!.width >= 768) return;
   const bouton = page.getByRole("button", { name: "Menu" });
-  if (await bouton.isVisible()) {
-    await bouton.click();
-    await expect(bouton).toHaveAttribute("aria-expanded", "true");
-  }
+  await expect(bouton).toBeVisible();
+  await bouton.click();
+  await expect(bouton).toHaveAttribute("aria-expanded", "true");
 }
 
 test("les ancres du menu fonctionnent depuis une autre page", async ({ page }) => {
   await page.goto("/reserver");
+  await expect(page.getByRole("heading", { level: 1, name: "Réserver" })).toBeVisible();
   const menu = page.getByRole("navigation", { name: "Navigation principale" });
 
   await ouvrirMenuSiReplie(page);
