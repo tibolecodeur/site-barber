@@ -1,121 +1,145 @@
-import type { SubmitEvent } from "react";
-import { Link } from "react-router";
+import { useState } from "react";
 import { PageMeta } from "@/components/PageMeta";
-import { PROVISIONAL_SERVICES } from "@/features/booking/provisionalServices";
+import { Section } from "@/components/Section";
+import type { AvailableSlot, BookingReceipt } from "@/features/booking/data";
+import type { ContactForm } from "@/features/booking/validation";
+import type { DayKey } from "@/lib/dates";
+import { ConfirmationStep } from "@/pages/booking/ConfirmationStep";
+import { ContactStep } from "@/pages/booking/ContactStep";
+import { ServiceStep } from "@/pages/booking/ServiceStep";
+import { SlotStep } from "@/pages/booking/SlotStep";
+import { SummaryStep } from "@/pages/booking/SummaryStep";
 
-const STEP_CLASS = "flex flex-col gap-2";
-const FIELD_CLASS = "flex flex-col gap-1";
-const CHOICE_CLASS = "flex min-h-11 items-center gap-2";
+type Step = "service" | "slot" | "contact" | "summary" | "done";
+
+const EMPTY_CONTACT: ContactForm = {
+  firstName: "",
+  lastName: "",
+  phone: "",
+  email: "",
+  consent: false,
+};
 
 /**
- * Squelette du parcours de réservation : structure et libellés seulement.
- * Aucune validation, aucun envoi : le branchement à la base viendra en phase 5.
+ * Parcours de réservation en étapes : prestation → jour et créneau → coordonnées →
+ * récapitulatif → confirmation. Le client choisit un créneau, jamais un lieu : chaque créneau
+ * porte le lieu fixé par le barber dans sa disponibilité (libellé public seulement).
  *
- * Chaque étape porte un titre h2 (plan de la page pour les lecteurs d'écran). Les étapes qui
- * regroupent plusieurs champs sont des <fieldset> dont le <legend> contient ce h2 : le groupe
- * est ainsi nommé ET présent dans le plan des titres. Les autres sont des <section>.
+ * Tout l'état du parcours vit ICI, dans le parent (« remonter l'état ») : chaque étape
+ * reçoit ses valeurs en props et signale les changements par des fonctions `on…`. Revenir
+ * en arrière ne perd donc rien : l'étape démontée n'emporte pas les données avec elle.
+ * C'est l'équivalent d'un objet en session côté Symfony, mais en mémoire dans la page.
  */
 export function BookingPage() {
-  // Sans ça, le navigateur « enverrait » le formulaire en rechargeant la page avec les
-  // valeurs dans l'URL (méthode GET par défaut). On bloque ce comportement natif.
-  function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const [step, setStep] = useState<Step>("service");
+  // Faux au premier affichage : le focus reste en haut de page (titre h1), comme partout.
+  const [hasNavigated, setHasNavigated] = useState(false);
+  const [service, setService] = useState<{ id: string; name: string } | null>(null);
+  const [day, setDay] = useState<DayKey | null>(null);
+  const [slot, setSlot] = useState<AvailableSlot | null>(null);
+  const [slotNotice, setSlotNotice] = useState<string | null>(null);
+  const [contact, setContact] = useState<ContactForm>(EMPTY_CONTACT);
+  const [website, setWebsite] = useState("");
+  const [receipt, setReceipt] = useState<BookingReceipt | null>(null);
+
+  function goTo(next: Step) {
+    setStep(next);
+    setHasNavigated(true);
+    if (next !== "slot") setSlotNotice(null);
+  }
+
+  // Un créneau choisi n'est valable que pour la prestation de ce moment-là.
+  function changeService(id: string, name: string) {
+    if (service?.id !== id) setSlot(null);
+    setService({ id, name });
+  }
+
+  function changeDay(next: DayKey) {
+    setDay(next);
+    setSlot(null);
+    setSlotNotice(null);
+  }
+
+  function renderStep() {
+    if (step === "service" || service === null) {
+      return (
+        <ServiceStep
+          serviceId={service?.id ?? null}
+          focusOnMount={hasNavigated}
+          onChange={changeService}
+          onNext={() => goTo("slot")}
+        />
+      );
+    }
+    if (step === "slot" || slot === null) {
+      return (
+        <SlotStep
+          serviceId={service.id}
+          day={day}
+          slot={slot}
+          notice={slotNotice}
+          focusOnMount={hasNavigated}
+          onDayChange={changeDay}
+          onSlotChange={setSlot}
+          onBack={() => goTo("service")}
+          onNext={() => goTo("contact")}
+        />
+      );
+    }
+    if (step === "contact") {
+      return (
+        <ContactStep
+          contact={contact}
+          website={website}
+          focusOnMount={hasNavigated}
+          onChange={setContact}
+          onWebsiteChange={setWebsite}
+          onBack={() => goTo("slot")}
+          onNext={() => goTo("summary")}
+        />
+      );
+    }
+    if (step === "summary" || receipt === null) {
+      return (
+        <SummaryStep
+          serviceId={service.id}
+          serviceName={service.name}
+          slot={slot}
+          contact={contact}
+          website={website}
+          focusOnMount={hasNavigated}
+          onBack={() => goTo("contact")}
+          onSlotLost={(message) => {
+            setSlot(null);
+            goTo("slot");
+            setSlotNotice(message);
+          }}
+          onBooked={(done) => {
+            setReceipt(done);
+            goTo("done");
+          }}
+        />
+      );
+    }
+    return <ConfirmationStep receipt={receipt} focusOnMount={hasNavigated} />;
   }
 
   return (
     <>
       <PageMeta
         title="Réserver"
-        description="Réservez un créneau chez CutsByAlix : choisissez une prestation, un jour et un créneau libre. Paiement sur place."
+        description="Réserve ton créneau chez CutsByAlix en une minute : prestation, jour, créneau libre. Paiement sur place."
       />
-      <h1>Réserver</h1>
-
-      <form onSubmit={handleSubmit} className="flex flex-col gap-6 py-4">
-        <fieldset className={STEP_CLASS}>
-          <legend>
-            <h2>1. Prestation</h2>
-          </legend>
-          {PROVISIONAL_SERVICES.map((service) => (
-            <label key={service.id} className={CHOICE_CLASS}>
-              <input type="radio" name="service" value={service.id} />
-              {service.name} ({service.durationMin} min, prix : {service.priceLabel})
-            </label>
-          ))}
-        </fieldset>
-
-        <section aria-labelledby="booking-step-day" className={STEP_CLASS}>
-          <h2 id="booking-step-day">2. Jour</h2>
-          <div className={FIELD_CLASS}>
-            <label htmlFor="booking-day">Jour du rendez-vous</label>
-            <input id="booking-day" name="day" type="date" />
-          </div>
-        </section>
-
-        <section aria-labelledby="booking-step-slot" className={STEP_CLASS}>
-          <h2 id="booking-step-slot">3. Créneau</h2>
-          <p>Les créneaux libres du jour choisi s'afficheront ici.</p>
-        </section>
-
-        <fieldset className="flex flex-col gap-4">
-          <legend>
-            <h2>4. Vos coordonnées</h2>
-          </legend>
-          <div className={FIELD_CLASS}>
-            <label htmlFor="booking-first-name">Prénom</label>
-            <input id="booking-first-name" name="firstName" type="text" autoComplete="given-name" />
-          </div>
-          <div className={FIELD_CLASS}>
-            <label htmlFor="booking-last-name">Nom</label>
-            <input id="booking-last-name" name="lastName" type="text" autoComplete="family-name" />
-          </div>
-          {/* Consigne lue par les lecteurs d'écran à l'arrivée sur chacun des deux champs. */}
-          <p id="booking-contact-hint">Téléphone et/ou email : au moins l'un des deux.</p>
-          <div className={FIELD_CLASS}>
-            <label htmlFor="booking-phone">Téléphone</label>
-            <input
-              id="booking-phone"
-              name="phone"
-              type="tel"
-              autoComplete="tel"
-              aria-describedby="booking-contact-hint"
-            />
-          </div>
-          <div className={FIELD_CLASS}>
-            <label htmlFor="booking-email">Email</label>
-            <input
-              id="booking-email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              aria-describedby="booking-contact-hint"
-            />
-          </div>
-        </fieldset>
-
-        <section aria-labelledby="booking-step-consent" className={STEP_CLASS}>
-          <h2 id="booking-step-consent">5. Consentement</h2>
-          <label className={CHOICE_CLASS}>
-            <input type="checkbox" name="consent" />
-            J'accepte que ces informations servent uniquement à gérer mon rendez-vous.
-          </label>
-          <p>
-            <Link to="/politique-confidentialite" className="inline-flex min-h-11 items-center">
-              Lire la politique de confidentialité
-            </Link>
-          </p>
-        </section>
-
-        <section aria-labelledby="booking-step-confirmation" className={STEP_CLASS}>
-          <h2 id="booking-step-confirmation">6. Confirmation</h2>
-          <p>Paiement en liquide, sur place. Le lieu exact s'affichera après la réservation.</p>
-          <p>
-            <button type="submit" className="min-h-11 border px-4">
-              Confirmer la réservation
-            </button>
-          </p>
-          <p>Provisoire : l'envoi n'est pas encore branché, ce bouton ne fait rien.</p>
-        </section>
-      </form>
+      <Section variant="blush">
+        <h1>Réserver</h1>
+        <p className="text-lg">Réserve ta coupe en une minute.</p>
+      </Section>
+      <Section>
+        {/* `key` : un cadre neuf à chaque étape (voir StepFrame, gestion du focus). */}
+        <div key={step} className="w-full">
+          {renderStep()}
+        </div>
+      </Section>
     </>
   );
 }

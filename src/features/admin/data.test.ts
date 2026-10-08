@@ -1,0 +1,157 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  AdminError,
+  changePassword,
+  createAvailability,
+  deleteAvailability,
+  getAdminBookings,
+  getAvailabilities,
+  getLocations,
+  getSession,
+  signIn,
+  signOut,
+} from "@/features/admin/data";
+import { formatTime } from "@/lib/dates";
+import { resetFakeDb } from "@/lib/fakeDb";
+
+/** Mardi 13 octobre 2026, 8 h à Paris (voir booking/data.test.ts pour les données). */
+const NOW = new Date("2026-10-13T06:00:00Z");
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+  resetFakeDb(NOW);
+  sessionStorage.clear();
+});
+
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+async function expectAdminError(promise: Promise<unknown>, code: string) {
+  await expect(promise).rejects.toBeInstanceOf(AdminError);
+  await expect(promise).rejects.toMatchObject({ code });
+}
+
+describe("authentification (faux état connecté, développement)", () => {
+  it("connecte, garde la session puis déconnecte", async () => {
+    expect(await getSession()).toBeNull();
+    expect(await signIn(" alix@example.com ", "secret")).toEqual({ email: "alix@example.com" });
+    expect(await getSession()).toEqual({ email: "alix@example.com" });
+
+    await signOut();
+    expect(await getSession()).toBeNull();
+  });
+
+  it("refuse des identifiants vides", async () => {
+    await expectAdminError(signIn("", "secret"), "invalid_credentials");
+    await expectAdminError(signIn("alix@example.com", ""), "invalid_credentials");
+  });
+
+  it("change le mot de passe seulement connecté, 8 caractères minimum", async () => {
+    await expectAdminError(changePassword("motdepasse"), "not_connected");
+    await signIn("alix@example.com", "secret");
+    await expectAdminError(changePassword("court"), "weak_password");
+    await expect(changePassword("motdepasse")).resolves.toBeUndefined();
+  });
+});
+
+describe("getLocations", () => {
+  it("donne à l'admin les lieux avec leur adresse privée", async () => {
+    const locations = await getLocations();
+    expect(locations.map((l) => l.publicLabel)).toEqual(["Chez ses parents", "Chez lui"]);
+    expect(locations[0]!.privateAddress).toMatch(/fictive/);
+  });
+});
+
+describe("getAdminBookings", () => {
+  it("liste les RDV confirmés d'une période, dans l'ordre, avec le client", async () => {
+    const today = await getAdminBookings({
+      from: "2026-10-12T22:00:00Z",
+      to: "2026-10-13T22:00:00Z",
+    });
+    expect(today.map((b) => [formatTime(b.startsAt), b.firstName])).toEqual([
+      ["09:00", "Nathan"],
+      ["11:00", "Sami"],
+      ["19:00", "Hugo"],
+    ]);
+    expect(today[0]).toMatchObject({
+      serviceName: "Coupe",
+      locationLabel: "Chez lui",
+      phone: "0639980001",
+      status: "confirmed",
+    });
+  });
+
+  it("inclut les annulés sur demande", async () => {
+    const all = await getAdminBookings({ from: NOW.toISOString(), includeCancelled: true });
+    const confirmed = await getAdminBookings({ from: NOW.toISOString() });
+    expect(all.filter((b) => b.status === "cancelled")).toHaveLength(1);
+    expect(confirmed).toHaveLength(all.length - 1);
+  });
+});
+
+describe("disponibilités", () => {
+  it("liste les plages à venir et en ajoute une", async () => {
+    const before = await getAvailabilities();
+    expect(before[0]).toMatchObject({ locationLabel: "Chez lui" });
+
+    const [parents] = await getLocations();
+    const created = await createAvailability({
+      locationId: parents!.id,
+      startsAt: "2026-10-19T08:00:00Z", // lundi, aucune dispo
+      endsAt: "2026-10-19T12:00:00Z",
+    });
+    expect(created).toMatchObject({ locationLabel: "Chez ses parents" });
+    expect(await getAvailabilities()).toHaveLength(before.length + 1);
+  });
+
+  it("refuse une fin avant le début, plus de 24 h, un lieu inconnu ou un chevauchement", async () => {
+    const [parents] = await getLocations();
+    const base = { locationId: parents!.id };
+    await expectAdminError(
+      createAvailability({
+        ...base,
+        startsAt: "2026-10-19T12:00:00Z",
+        endsAt: "2026-10-19T08:00:00Z",
+      }),
+      "invalid_range",
+    );
+    await expectAdminError(
+      createAvailability({
+        ...base,
+        startsAt: "2026-10-19T08:00:00Z",
+        endsAt: "2026-10-20T09:00:00Z",
+      }),
+      "invalid_range",
+    );
+    await expectAdminError(
+      createAvailability({
+        locationId: "inconnu",
+        startsAt: "2026-10-19T08:00:00Z",
+        endsAt: "2026-10-19T09:00:00Z",
+      }),
+      "not_found",
+    );
+    // Aujourd'hui 9 h–21 h « Chez lui » : chevauchement, même dans l'autre lieu.
+    await expectAdminError(
+      createAvailability({
+        ...base,
+        startsAt: "2026-10-13T16:00:00Z",
+        endsAt: "2026-10-13T20:00:00Z",
+      }),
+      "availability_overlap",
+    );
+  });
+
+  it("supprime une plage vide, refuse une plage qui contient des RDV", async () => {
+    const availabilities = await getAvailabilities();
+    const today = availabilities[0]!; // contient des RDV
+    const sunday = availabilities.find((a) => a.startsAt.startsWith("2026-10-14"))!; // mercredi, vide
+
+    await expectAdminError(deleteAvailability(today.id), "availability_has_bookings");
+    await deleteAvailability(sunday.id);
+    expect((await getAvailabilities()).some((a) => a.id === sunday.id)).toBe(false);
+    await expectAdminError(deleteAvailability(sunday.id), "not_found");
+  });
+});

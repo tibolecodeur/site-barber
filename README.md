@@ -147,11 +147,13 @@ src/
 ├── components/       composants réutilisables
 │   └── ui/           composants shadcn/ui (code copié, modifiable)
 ├── features/         logique métier, par fonctionnalité
-│   ├── booking/      créneaux, réservation, annulation
-│   ├── admin/        disponibilités, rendez-vous, galerie
+│   ├── booking/      créneaux, réservation, annulation (data.ts, validation.ts)
+│   ├── admin/        connexion, disponibilités, rendez-vous (data.ts)
 │   └── gallery/      affichage public des créations
 ├── lib/
 │   ├── supabase.ts   client Supabase unique
+│   ├── fakeDb.ts     fausse base en mémoire (maquette, avant branchement Supabase)
+│   ├── dates.ts      dates : stockées en ISO, affichées en heure de Paris
 │   └── schemas.ts    schémas Zod partagés
 └── test/setup.ts     configuration des tests
 

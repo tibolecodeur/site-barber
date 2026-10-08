@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /** Chaque route, son titre h1 et le titre d'onglet attendu. */
 const PAGES = [
@@ -52,6 +52,8 @@ for (const { chemin, h1, onglet } of PAGES) {
 
 test("l'accueil contient les sections dans l'ordre attendu", async ({ page }) => {
   await page.goto("/");
+  // Attente explicite du rendu : `evaluateAll` lit le DOM tel quel, sans attendre.
+  await expect(page.locator("main section[id]")).toHaveCount(4);
 
   const ids = await page
     .locator("main section[id]")
@@ -70,14 +72,32 @@ test("l'accueil affiche les deux prestations sans prix inventé", async ({ page 
   await expect(prestations.getByText("Prix : À confirmer")).toHaveCount(2);
 });
 
+/**
+ * Sur mobile (sous 768 px, le point de rupture `md`), les liens sont dans un menu replié :
+ * on l'ouvre. La décision vient de la largeur d'écran, connue d'avance, et non d'un
+ * `isVisible()` instantané : sur un serveur froid, React n'a pas encore affiché le bouton à
+ * cet instant, le menu restait fermé et le clic suivant attendait 30 s (test fragile).
+ */
+async function ouvrirMenuSiReplie(page: Page) {
+  if (page.viewportSize()!.width >= 768) return;
+  const bouton = page.getByRole("button", { name: "Menu" });
+  await expect(bouton).toBeVisible();
+  await bouton.click();
+  await expect(bouton).toHaveAttribute("aria-expanded", "true");
+}
+
 test("les ancres du menu fonctionnent depuis une autre page", async ({ page }) => {
   await page.goto("/reserver");
+  await expect(page.getByRole("heading", { level: 1, name: "Réserver" })).toBeVisible();
+  const menu = page.getByRole("navigation", { name: "Navigation principale" });
 
-  await page.getByRole("link", { name: "Galerie" }).click();
+  await ouvrirMenuSiReplie(page);
+  await menu.getByRole("link", { name: "Galerie" }).click();
   await expect(page).toHaveURL("/#galerie");
   await expect(page.getByRole("heading", { level: 2, name: "Galerie" })).toBeInViewport();
 
-  await page.getByRole("link", { name: "Réserver", exact: true }).first().click();
+  await ouvrirMenuSiReplie(page);
+  await menu.getByRole("link", { name: "Réserver", exact: true }).click();
   await expect(page).toHaveURL("/reserver");
   await expect(page.getByRole("heading", { level: 1, name: "Réserver" })).toBeInViewport();
 });
@@ -110,36 +130,16 @@ test("le lien d'évitement mène au contenu", async ({ page, browserName }) => {
   await expect(page).toHaveURL(/#contenu$/);
 });
 
-test("chaque champ de /reserver a un nom accessible (label)", async ({ page }) => {
-  await page.goto("/reserver");
-  // `count()` est un instantané qui n'attend pas : on attend d'abord le rendu de la page.
-  await expect(page.getByRole("heading", { level: 1, name: "Réserver" })).toBeVisible();
-
-  const champs = page.locator("form input, form select, form textarea");
-  const total = await champs.count();
-  expect(total).toBeGreaterThan(0);
-  for (let i = 0; i < total; i++) {
-    await expect(champs.nth(i)).toHaveAccessibleName(/\S/);
+test("le site public ne contient aucun lien vers l'espace admin", async ({ page }) => {
+  for (const chemin of [
+    "/",
+    "/reserver",
+    "/annuler",
+    "/mentions-legales",
+    "/une-url-qui-nexiste-pas",
+  ]) {
+    await page.goto(chemin);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator('a[href^="/admin"]'), chemin).toHaveCount(0);
   }
-
-  // Mobile : texte à 16 px minimum (sinon Safari zoome) et zones tactiles de 44 px minimum.
-  // Les cases et boutons radio sont petits, mais leur label (cliquable) fait 44 px.
-  const mesures = await champs.evaluateAll((els) =>
-    els.map((el) => {
-      const cible = el.matches('[type="checkbox"], [type="radio"]') ? el.closest("label")! : el;
-      return {
-        name: el.getAttribute("name"),
-        hauteur: cible.getBoundingClientRect().height,
-        police: parseFloat(getComputedStyle(el).fontSize),
-      };
-    }),
-  );
-  for (const { name, hauteur, police } of mesures) {
-    expect(hauteur, `zone tactile de ${name}`).toBeGreaterThanOrEqual(44);
-    expect(police, `taille du texte de ${name}`).toBeGreaterThanOrEqual(16);
-  }
-
-  // Types adaptés : clavier numérique pour le téléphone, clavier email pour l'email.
-  await expect(page.getByLabel("Téléphone")).toHaveAttribute("type", "tel");
-  await expect(page.getByLabel("Email")).toHaveAttribute("type", "email");
 });

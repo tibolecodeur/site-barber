@@ -39,3 +39,9 @@ dist-ssr
 .agents/skills/impeccable/
 .claude/agents/impeccable-*.md
 .impeccable/
+
+# Inspiration (photos de personnes identifiables : jamais dans le dépôt public)
+docs/inspiration/
+
+# Photos sources (personnes identifiables) : jamais dans le dépôt public
+media-source/

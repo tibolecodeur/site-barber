@@ -1,10 +1,118 @@
 @import "tailwindcss";
 
 /*
- * Squelette : uniquement des règles de lisibilité et d'ergonomie mobile.
- * Ni couleur, ni police, ni ombre, ni arrondi, ni transition (voir docs/DESIGN.md).
+ * Archivo auto-hébergée (docs/DESIGN.md) : seulement les deux fichiers réellement utilisés.
+ * - wght, droit : texte courant, champs, boutons (axe graisse, largeur normale) ;
+ * - wdth, italique : titres et logo (axes graisse ET largeur, pour le très condensé).
+ * Les @font-face du paquet déclarent déjà `font-display: swap`.
  */
+@import "@fontsource-variable/archivo/wght.css";
+@import "@fontsource-variable/archivo/wdth-italic.css";
+
+/*
+ * Tokens du design (docs/DESIGN.md fait foi). Chaque variable génère ses utilitaires :
+ * --color-ink → bg-ink, text-ink, border-ink… La palette par défaut de Tailwind est effacée
+ * (`initial`) : une couleur hors charte ne compile tout simplement pas.
+ */
+@theme {
+  --color-*: initial;
+  --color-surface: #ffffff; /* fond principal */
+  --color-blush: #ffd9e6; /* fond alterné, fond des boutons principaux, accent sur bloc noir */
+  --color-ink: #111111; /* texte, blocs sombres, texte et contour des boutons */
+  --color-muted: #5c5c5c; /* texte secondaire, sur fond clair UNIQUEMENT */
+  --color-orange: #ff6a1a; /* duotone du hero uniquement ; JAMAIS en texte sur fond clair */
+  --color-accent: #c2185b; /* liens et accents sur fond clair, JAMAIS sur bloc noir */
+  --color-white: #ffffff; /* texte sur bloc noir */
+
+  --font-*: initial;
+  --font-sans: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Archivo Variable", ui-sans-serif, system-ui, sans-serif;
+
+  --radius-pill: 9999px; /* boutons « pilule » */
+
+  --spacing-tap: 2.75rem; /* 44 px : zone tactile minimale */
+  --spacing-button: 3.25rem; /* 52 px : hauteur minimale des boutons */
+  --spacing-header: 4rem; /* hauteur de l'en-tête (hors zone sûre) */
+  --spacing-gutter: 1rem; /* marge latérale minimale */
+  --spacing-section: 3.5rem; /* espacement vertical des sections, mobile */
+  --spacing-section-lg: 5rem; /* idem, à partir de md */
+
+  --container-content: 48rem; /* largeur maximale du contenu */
+}
+
+/* Titres et logo : très condensé, extra-gras, italique. */
+@utility title-display {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-weight: 850;
+  font-stretch: 62.5%;
+  line-height: 0.95;
+}
+
+/* Marges latérales : la gouttière, ou la zone sûre si elle est plus grande (iPhone en paysage). */
+@utility px-safe {
+  padding-left: max(var(--spacing-gutter), env(safe-area-inset-left));
+  padding-right: max(var(--spacing-gutter), env(safe-area-inset-right));
+}
+
+/*
+ * Lien dans le texte. Couleur et graisse viennent du contexte (variables posées par Section,
+ * Card, le pied de page) : rose foncé sur clair, en gras sur le rose pâle, rose pâle sur noir.
+ */
+@utility link {
+  color: var(--link-color, var(--color-accent));
+  font-weight: var(--link-weight, 400);
+  text-decoration-line: underline;
+  text-underline-offset: 0.2em;
+}
+
+/*
+ * Anneau de focus sur un libellé dont le contrôle est masqué (sr-only), ex. les jours du
+ * calendrier : l'input invisible reçoit le focus, le libellé visible l'affiche.
+ */
+@utility focus-ring-within {
+  &:has(:focus-visible) {
+    outline: 3px solid var(--focus-ring, var(--color-ink));
+    outline-offset: 2px;
+  }
+}
+
 @layer base {
+  html {
+    /* Les ancres (/#galerie) ne doivent pas finir cachées sous l'en-tête fixe. */
+    scroll-padding-top: calc(var(--spacing-header) + env(safe-area-inset-top));
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    line-height: 1.5;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-weight: 850;
+    font-stretch: 62.5%;
+    line-height: 0.95;
+    /* Mots longs (« confidentialité ») : césure française plutôt que débordement à 375 px. */
+    overflow-wrap: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+  h1 {
+    font-size: 3rem;
+  }
+  h2 {
+    font-size: 2.5rem;
+  }
+  h3 {
+    font-size: 1.75rem;
+  }
+
   /* Safari iOS zoome sur tout champ dont le texte fait moins de 16 px. */
   input,
   select,
@@ -13,13 +121,24 @@
     font-size: max(1rem, 16px);
   }
 
-  /* Zones tactiles d'au moins 44 px. La remise à zéro de Tailwind (preflight) retire aussi
-     les bordures : on rend un simple contour aux champs pour qu'ils restent repérables. */
-  input:not([type="checkbox"], [type="radio"]),
-  select,
-  textarea {
-    min-height: 2.75rem;
-    border-width: 1px;
-    padding-inline: 0.5rem;
+  /*
+   * Focus visible partout. La couleur suit le contexte : noir sur fond clair, blanc sur les
+   * blocs sombres (variable --focus-ring posée par Section, le hero, l'en-tête, le pied de page).
+   */
+  :focus-visible {
+    outline: 3px solid var(--focus-ring, var(--color-ink));
+    outline-offset: 3px;
+  }
+
+  /* Filet de sécurité : aucune transition ni animation si l'utilisateur les a désactivées. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }

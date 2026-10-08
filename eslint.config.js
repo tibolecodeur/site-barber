@@ -8,7 +8,17 @@ import tseslint from "typescript-eslint";
 // « Flat config » d'ESLint : un simple tableau d'objets, appliqués de haut en bas.
 // Chaque objet peut restreindre sa portée avec `files`. L'ordre compte : le dernier gagne.
 export default tseslint.config(
-  { ignores: ["dist", "coverage", "playwright-report", "test-results"] },
+  {
+    ignores: [
+      "dist",
+      "coverage",
+      "playwright-report",
+      "test-results",
+      // Scripts tiers du skill Impeccable, installés en local et ignorés par git (.gitignore).
+      ".agents/skills/impeccable",
+      ".claude/skills/impeccable",
+    ],
+  },
   js.configs.recommended,
   tseslint.configs.recommended,
   {

@@ -1,4 +1,5 @@
 import { PageMeta } from "@/components/PageMeta";
+import { Section } from "@/components/Section";
 
 /** Titres provisoires (rubriques attendues par le RGPD) : contenu à rédiger avant la mise en ligne. */
 const SECTIONS = [
@@ -7,7 +8,7 @@ const SECTIONS = [
   "Finalité",
   "Durée de conservation",
   "Destinataires",
-  "Vos droits",
+  "Tes droits",
   "Cookies",
 ];
 
@@ -16,15 +17,19 @@ export function PrivacyPolicyPage() {
     <>
       <PageMeta
         title="Politique de confidentialité"
-        description="Comment CutsByAlix traite vos données personnelles lors d'une réservation."
+        description="Comment CutsByAlix traite tes données personnelles lors d'une réservation."
       />
-      <h1>Politique de confidentialité</h1>
-      {SECTIONS.map((section) => (
-        <section key={section} className="py-3">
-          <h2>{section}</h2>
-          <p>À rédiger.</p>
-        </section>
-      ))}
+      <Section variant="blush">
+        <h1>Politique de confidentialité</h1>
+      </Section>
+      <Section>
+        {SECTIONS.map((section) => (
+          <section key={section} className="flex flex-col gap-2">
+            <h2 className="text-3xl">{section}</h2>
+            <p className="text-muted">À rédiger.</p>
+          </section>
+        ))}
+      </Section>
     </>
   );
 }

@@ -50,6 +50,22 @@ Ce projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
   - tests e2e (titres, ordre des sections, ancres, labels, débordement à 375 px) et audit
     d'accessibilité automatique avec `@axe-core/playwright` sur chaque route.
 - Intentions de design (non appliquées) consignées dans `docs/DESIGN.md`.
+- Fondations visuelles (direction B + C de `docs/DESIGN.md`) :
+  - tokens Tailwind v4 (`@theme`) : palette réduite aux 7 couleurs validées, Archivo
+    auto-hébergée (`@fontsource-variable/archivo`, 2 fichiers : droit et italique condensé),
+    boutons pilule, espacements, focus visible adapté au fond ;
+  - composants `Button` / `ButtonLink`, `Field`, `Section` (blanc, rose pâle, noir), `Card`,
+    `HeroVideo` (duotone fixe, voile, poster seul si animations réduites ou lecture refusée) ;
+  - hero plein écran, en-tête qui passe du blanc au noir au défilement, menu mobile replié,
+    bouton « Réserver » collé en bas sur mobile, pied de page noir ; toutes les pages habillées ;
+  - tests Vitest des composants et hooks, test Playwright mobile du hero.
+- Maquette fonctionnelle de tous les écrans, sur une fausse base en mémoire (aucun appel
+  Supabase) : couche données `src/features/*/data.ts` calquée sur les RPC et les tables ;
+  parcours `/reserver` en étapes (prestation, jour et créneau portant le lieu, coordonnées avec
+  honeypot, récapitulatif, confirmation avec lien d'annulation) ; états de `/annuler` ;
+  espace admin (connexion, tableau de bord, RDV, disponibilités, galerie, mot de passe,
+  déconnexion) avec un faux état connecté réservé au développement, absent du build de
+  production (test sur un vrai build).
 
 ### Modifié
 
