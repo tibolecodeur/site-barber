@@ -8,7 +8,7 @@ const SECTIONS = [
   "Finalité",
   "Durée de conservation",
   "Destinataires",
-  "Vos droits",
+  "Tes droits",
   "Cookies",
 ];
 
@@ -17,7 +17,7 @@ export function PrivacyPolicyPage() {
     <>
       <PageMeta
         title="Politique de confidentialité"
-        description="Comment CutsByAlix traite vos données personnelles lors d'une réservation."
+        description="Comment CutsByAlix traite tes données personnelles lors d'une réservation."
       />
       <Section variant="blush">
         <h1>Politique de confidentialité</h1>

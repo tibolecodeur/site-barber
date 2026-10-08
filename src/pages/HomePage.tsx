@@ -4,7 +4,9 @@ import { HeroVideo } from "@/components/HeroVideo";
 import { PageMeta } from "@/components/PageMeta";
 import { PhotoPlaceholder } from "@/components/PhotoPlaceholder";
 import { Section } from "@/components/Section";
-import { PROVISIONAL_SERVICES } from "@/features/booking/provisionalServices";
+import { ErrorMessage, LoadingMessage } from "@/components/StatusMessage";
+import { getServices } from "@/features/booking/data";
+import { useAsync } from "@/lib/useAsync";
 
 /** Nombre d'emplacements de la galerie, en attendant les vraies photos. */
 const GALLERY_SLOTS = 6;
@@ -18,16 +20,18 @@ const GALLERY_SLOTS = 6;
 const HERO_MEDIA: { videoSrc?: string; posterSrc?: string } = {};
 
 const BOOKING_STEPS = [
-  "Choisissez une prestation.",
-  "Choisissez un jour.",
-  "Choisissez un créneau libre.",
+  "Choisis une prestation.",
+  "Choisis un jour.",
+  "Choisis un créneau libre.",
 ] as const;
 
 /** Accueil : une seule longue page, chaque section a une ancre (#prestations, #galerie…). */
 export function HomePage() {
+  const services = useAsync("services", getServices);
+
   return (
     <>
-      <PageMeta description="CutsByAlix, barber : coupe et coupe + barbe sur rendez-vous. Réservez votre créneau en ligne, paiement sur place." />
+      <PageMeta description="CutsByAlix, barber : coupe et coupe + barbe sur rendez-vous. Réserve ton créneau en ligne, paiement sur place." />
 
       {/* Hero plein écran : 100dvh (et non 100vh, faussé par la barre d'adresse mobile).
           `isolate` crée un contexte d'empilement : le fond (-z-10) reste DANS le hero. */}
@@ -68,15 +72,25 @@ export function HomePage() {
 
       <Section id="prestations" aria-labelledby="prestations-titre">
         <h2 id="prestations-titre">Prestations</h2>
-        <ul className="grid gap-4 sm:grid-cols-2">
-          {PROVISIONAL_SERVICES.map((service) => (
-            <Card as="li" key={service.id}>
-              <h3>{service.name}</h3>
-              <p className="text-muted">Durée : {service.durationMin} min</p>
-              <p className="font-semibold">Prix : {service.priceLabel}</p>
-            </Card>
-          ))}
-        </ul>
+        {services.status === "loading" && (
+          <LoadingMessage>Chargement des prestations…</LoadingMessage>
+        )}
+        {services.status === "error" && (
+          <ErrorMessage onRetry={services.reload}>
+            Impossible de charger les prestations. Vérifie ta connexion, puis réessaie.
+          </ErrorMessage>
+        )}
+        {services.status === "success" && (
+          <ul className="grid gap-4 sm:grid-cols-2">
+            {services.data.map((service) => (
+              <Card as="li" key={service.id}>
+                <h3>{service.name}</h3>
+                <p className="text-muted">Durée : {service.durationMin} min</p>
+                <p className="font-semibold">Prix : {service.priceLabel ?? "À confirmer"}</p>
+              </Card>
+            ))}
+          </ul>
+        )}
       </Section>
 
       {/* Bloc noir : les photos en noir et blanc y ressortent. */}
@@ -118,7 +132,7 @@ export function HomePage() {
         </ol>
         <div className="flex flex-col gap-1">
           <p>Paiement en liquide, sur place.</p>
-          <p>Le lieu exact vous est communiqué au moment de la réservation.</p>
+          <p>Le lieu exact t'est communiqué au moment de la réservation.</p>
         </div>
         <p className="hidden md:block">
           <ButtonLink to="/reserver">Réserver</ButtonLink>

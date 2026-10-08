@@ -66,6 +66,17 @@
   text-underline-offset: 0.2em;
 }
 
+/*
+ * Anneau de focus sur un libellé dont le contrôle est masqué (sr-only), ex. les jours du
+ * calendrier : l'input invisible reçoit le focus, le libellé visible l'affiche.
+ */
+@utility focus-ring-within {
+  &:has(:focus-visible) {
+    outline: 3px solid var(--focus-ring, var(--color-ink));
+    outline-offset: 2px;
+  }
+}
+
 @layer base {
   html {
     /* Les ancres (/#galerie) ne doivent pas finir cachées sous l'en-tête fixe. */

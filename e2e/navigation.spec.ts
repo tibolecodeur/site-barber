@@ -122,36 +122,16 @@ test("le lien d'évitement mène au contenu", async ({ page, browserName }) => {
   await expect(page).toHaveURL(/#contenu$/);
 });
 
-test("chaque champ de /reserver a un nom accessible (label)", async ({ page }) => {
-  await page.goto("/reserver");
-  // `count()` est un instantané qui n'attend pas : on attend d'abord le rendu de la page.
-  await expect(page.getByRole("heading", { level: 1, name: "Réserver" })).toBeVisible();
-
-  const champs = page.locator("form input, form select, form textarea");
-  const total = await champs.count();
-  expect(total).toBeGreaterThan(0);
-  for (let i = 0; i < total; i++) {
-    await expect(champs.nth(i)).toHaveAccessibleName(/\S/);
+test("le site public ne contient aucun lien vers l'espace admin", async ({ page }) => {
+  for (const chemin of [
+    "/",
+    "/reserver",
+    "/annuler",
+    "/mentions-legales",
+    "/une-url-qui-nexiste-pas",
+  ]) {
+    await page.goto(chemin);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await expect(page.locator('a[href^="/admin"]'), chemin).toHaveCount(0);
   }
-
-  // Mobile : texte à 16 px minimum (sinon Safari zoome) et zones tactiles de 44 px minimum.
-  // Les cases et boutons radio sont petits, mais leur label (cliquable) fait 44 px.
-  const mesures = await champs.evaluateAll((els) =>
-    els.map((el) => {
-      const cible = el.matches('[type="checkbox"], [type="radio"]') ? el.closest("label")! : el;
-      return {
-        name: el.getAttribute("name"),
-        hauteur: cible.getBoundingClientRect().height,
-        police: parseFloat(getComputedStyle(el).fontSize),
-      };
-    }),
-  );
-  for (const { name, hauteur, police } of mesures) {
-    expect(hauteur, `zone tactile de ${name}`).toBeGreaterThanOrEqual(44);
-    expect(police, `taille du texte de ${name}`).toBeGreaterThanOrEqual(16);
-  }
-
-  // Types adaptés : clavier numérique pour le téléphone, clavier email pour l'email.
-  await expect(page.getByLabel("Téléphone")).toHaveAttribute("type", "tel");
-  await expect(page.getByLabel("Email")).toHaveAttribute("type", "email");
 });

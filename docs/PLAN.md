@@ -44,7 +44,10 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 ## Phase 5 — Réservation client
 
 - [ ] Parcours complet · Confirmation + .ics + lien d'annulation · Page d'annulation
-- [ ] Tests Playwright mobile
+      _(maquette fonctionnelle faite sur fausse base (src/lib/fakeDb.ts) : parcours en étapes,
+      confirmation avec lien d'annulation, 4 états de /annuler. Restent : branchement Supabase,
+      .ics, origine des libellés de lieux pour l'étape « Où ? » (l'anonyme ne lit pas `locations`))_
+- [x] Tests Playwright mobile _(parcours /reserver et 4 états de /annuler, sur fausse base)_
 - [ ] **`<meta name="robots" content="noindex">` sur `/admin`, `/annuler` et la 404**
       (prop à ajouter à `PageMeta`). **À faire avant la mise en ligne de la réservation.**
 - [ ] **`referrer: no-referrer` sur `/annuler`** : l'URL contient le `cancel_token`, il ne doit
@@ -58,6 +61,10 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 ## Phase 6 — Espace admin
 
 - [ ] Connexion · Disponibilités · Liste des RDV · Galerie · Prestations
+      _(maquettes faites sur fausse base : connexion, tableau de bord, RDV, dispos (ajout,
+      suppression), galerie (sans envoi), mot de passe, déconnexion ; faux état connecté réservé
+      au dev, absent du build de prod (test). Restent : branchement Supabase Auth / tables /
+      Storage, prestations, duplication d'une semaine, annulation d'un RDV par le barber)_
 
 ## Phase 7 — Animations et effets
 
