@@ -121,9 +121,9 @@ conservation des données clients 6 mois.
 
 Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, admin,
 chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.
-`supabase/seed.sql` : les prestations de départ, relançable sans doublon, à lancer à la main dans
-le SQL Editor du projet distant. `supabase/seed-dev.sql` : lieux (**adresses factices**) et
-disponibilités de test, pour la base **locale uniquement**.
+`supabase/seed.sql` : prestations et lieux de départ (adresses « À RENSEIGNER », jamais de vraie
+adresse dans le dépôt), relançable sans doublon, à lancer à la main dans le SQL Editor du projet
+distant. `supabase/seed-dev.sql` : disponibilités de test, pour la base **locale uniquement**.
 
 > ⚠️ Ne jamais utiliser `supabase db push --include-seed` : `seed-dev.sql` partirait sur le
 > projet distant (il s'arrête de lui-même sur une base qui a déjà un admin ou des RDV).
@@ -169,7 +169,8 @@ e2e/                  tests Playwright
 supabase/
 ├── migrations/       toute évolution du schéma, versionnée
 ├── tests/            tests pgTAP (règles SQL, RLS, accès interdits)
-├── seed.sql          données de développement local (adresses factices)
+├── seed.sql          prestations et lieux de départ (adresses « À RENSEIGNER »)
+├── seed-dev.sql      disponibilités de test, base locale uniquement
 └── config.toml       configuration de la stack locale
 docs/                 SPEC, PLAN, DESIGN, ADR, TESTS-APPAREILS (checklist téléphones)
 .github/workflows/    CI (lint, types, tests, pgTAP, build, e2e)
