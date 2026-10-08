@@ -5,7 +5,6 @@ import {
   createBooking,
   getAvailableSlots,
   getBooking,
-  getLocationLabels,
   getServices,
   isUuid,
   type NewBooking,
@@ -23,6 +22,8 @@ const TODAY = "2026-10-13";
 const NEXT_TUESDAY = "2026-10-20";
 
 let cutId: string;
+/** Lieu « Chez lui », lu sur les créneaux comme le ferait l'écran. */
+let homeId: string;
 
 beforeEach(async () => {
   // Seul `Date` est simulé : les promesses et les timers restent réels.
@@ -30,6 +31,7 @@ beforeEach(async () => {
   vi.setSystemTime(NOW);
   resetFakeDb(NOW);
   cutId = (await getServices())[0]!.id;
+  homeId = (await getAvailableSlots(cutId, NEXT_TUESDAY))[0]!.locationId;
 });
 
 afterEach(() => {
@@ -40,6 +42,7 @@ function bookingInput(overrides: Partial<NewBooking> = {}): NewBooking {
   return {
     serviceId: cutId,
     startsAt: "2026-10-20T12:00:00.000Z", // mardi 20, 14 h à Paris
+    locationId: homeId,
     firstName: " Zoé ",
     lastName: "Durand",
     phone: "06 39 98 00 10",
@@ -52,16 +55,12 @@ async function expectBookingError(promise: Promise<unknown>, code: string) {
   await expect(promise).rejects.toMatchObject({ code });
 }
 
-describe("getServices et getLocationLabels", () => {
+describe("getServices", () => {
   it("renvoie les prestations actives dans l'ordre, sans prix inventé", async () => {
     expect(await getServices()).toEqual([
       { id: expect.any(String), name: "Coupe", durationMin: 60, priceLabel: null },
       { id: expect.any(String), name: "Coupe + barbe", durationMin: 60, priceLabel: null },
     ]);
-  });
-
-  it("renvoie les libellés publics des lieux, jamais l'adresse", async () => {
-    expect(await getLocationLabels()).toEqual(["Chez ses parents", "Chez lui"]);
   });
 });
 
@@ -79,11 +78,30 @@ describe("getAvailableSlots", () => {
       "18:00",
       "20:00",
     ]);
+    // Forme exacte : le lieu (id + libellé public) vient avec le créneau, jamais l'adresse.
     expect(slots[0]).toEqual({
       startsAt: "2026-10-13T08:00:00.000Z",
       endsAt: "2026-10-13T09:00:00.000Z",
+      locationId: homeId,
       locationLabel: "Chez lui",
     });
+  });
+
+  it("donne à chaque créneau le lieu de sa dispo, plusieurs lieux le même jour", async () => {
+    // Samedi 17 : 10 h–13 h « Chez ses parents » (10 h déjà pris), 14 h–18 h « Chez lui ».
+    const slots = await getAvailableSlots(cutId, "2026-10-17");
+    expect(slots.map((s) => [formatTime(s.startsAt), s.locationLabel])).toEqual([
+      ["11:00", "Chez ses parents"],
+      ["12:00", "Chez ses parents"],
+      ["14:00", "Chez lui"],
+      ["15:00", "Chez lui"],
+      ["16:00", "Chez lui"],
+      ["17:00", "Chez lui"],
+    ]);
+    const parentsId = slots[0]!.locationId;
+    expect(parentsId).not.toBe(homeId);
+    expect(slots.filter((s) => s.locationId === parentsId)).toHaveLength(2);
+    expect(JSON.stringify(slots)).not.toMatch(/fictive/);
   });
 
   it("libère le créneau d'un RDV annulé", async () => {
@@ -128,6 +146,21 @@ describe("createBooking", () => {
       createBooking(bookingInput({ startsAt: "2026-10-20T12:30:00.000Z" })),
       "slot_unavailable",
     );
+  });
+
+  it("refuse un lieu qui n'est pas celui du créneau (dispo changée de lieu entre-temps)", async () => {
+    const parentsId = (await getAvailableSlots(cutId, "2026-10-17"))[0]!.locationId;
+    await expectBookingError(
+      createBooking(bookingInput({ locationId: parentsId })),
+      "slot_unavailable",
+    );
+    await expectBookingError(
+      createBooking(bookingInput({ locationId: "inconnu" })),
+      "slot_unavailable",
+    );
+    // Le créneau reste libre : rien n'a été réservé.
+    const slots = await getAvailableSlots(cutId, NEXT_TUESDAY);
+    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["14:00", "15:00", "17:00"]);
   });
 
   it("refuse un créneau trop proche ou trop lointain", async () => {

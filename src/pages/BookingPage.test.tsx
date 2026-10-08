@@ -14,7 +14,6 @@ vi.mock("@/features/booking/data", async (importOriginal) => {
   return {
     ...original,
     getServices: vi.fn(),
-    getLocationLabels: vi.fn(),
     getAvailableSlots: vi.fn(),
   };
 });
@@ -31,7 +30,6 @@ function renderPage() {
 
 beforeEach(() => {
   vi.mocked(bookingData.getServices).mockReset();
-  vi.mocked(bookingData.getLocationLabels).mockResolvedValue(["Chez lui"]);
   vi.mocked(bookingData.getAvailableSlots).mockReset();
 });
 
@@ -59,6 +57,7 @@ describe("BookingPage : chargement et erreurs", () => {
         {
           startsAt: "2030-01-15T13:00:00.000Z",
           endsAt: "2030-01-15T14:00:00.000Z",
+          locationId: "l1",
           locationLabel: "Chez lui",
         },
       ]);
@@ -66,13 +65,15 @@ describe("BookingPage : chargement et erreurs", () => {
 
     await user.click(await screen.findByRole("radio", { name: /Coupe/ }));
     await user.click(screen.getByRole("button", { name: "Continuer" }));
-    await user.click(await screen.findByRole("button", { name: "Continuer" }));
     await user.click(screen.getAllByRole("radio")[0]!);
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       /Impossible de charger les créneaux/,
     );
     await user.click(screen.getByRole("button", { name: "Réessayer" }));
-    expect(await screen.findByRole("radio", { name: /14:00 – 15:00/ })).toBeInTheDocument();
+    // Le créneau affiche le libellé public de son lieu.
+    expect(
+      await screen.findByRole("radio", { name: /14:00 – 15:00\s*Chez lui/ }),
+    ).toBeInTheDocument();
   });
 });

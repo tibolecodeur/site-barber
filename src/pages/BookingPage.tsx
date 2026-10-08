@@ -6,12 +6,11 @@ import type { ContactForm } from "@/features/booking/validation";
 import type { DayKey } from "@/lib/dates";
 import { ConfirmationStep } from "@/pages/booking/ConfirmationStep";
 import { ContactStep } from "@/pages/booking/ContactStep";
-import { LocationStep } from "@/pages/booking/LocationStep";
 import { ServiceStep } from "@/pages/booking/ServiceStep";
 import { SlotStep } from "@/pages/booking/SlotStep";
 import { SummaryStep } from "@/pages/booking/SummaryStep";
 
-type Step = "service" | "location" | "slot" | "contact" | "summary" | "done";
+type Step = "service" | "slot" | "contact" | "summary" | "done";
 
 const EMPTY_CONTACT: ContactForm = {
   firstName: "",
@@ -22,8 +21,9 @@ const EMPTY_CONTACT: ContactForm = {
 };
 
 /**
- * Parcours de réservation en étapes : prestation → lieu → jour et créneau → coordonnées →
- * récapitulatif → confirmation.
+ * Parcours de réservation en étapes : prestation → jour et créneau → coordonnées →
+ * récapitulatif → confirmation. Le client choisit un créneau, jamais un lieu : chaque créneau
+ * porte le lieu fixé par le barber dans sa disponibilité (libellé public seulement).
  *
  * Tout l'état du parcours vit ICI, dans le parent (« remonter l'état ») : chaque étape
  * reçoit ses valeurs en props et signale les changements par des fonctions `on…`. Revenir
@@ -35,7 +35,6 @@ export function BookingPage() {
   // Faux au premier affichage : le focus reste en haut de page (titre h1), comme partout.
   const [hasNavigated, setHasNavigated] = useState(false);
   const [service, setService] = useState<{ id: string; name: string } | null>(null);
-  const [location, setLocation] = useState<string | null>(null);
   const [day, setDay] = useState<DayKey | null>(null);
   const [slot, setSlot] = useState<AvailableSlot | null>(null);
   const [slotNotice, setSlotNotice] = useState<string | null>(null);
@@ -49,15 +48,10 @@ export function BookingPage() {
     if (next !== "slot") setSlotNotice(null);
   }
 
-  // Un créneau choisi n'est valable que pour la prestation et le lieu de ce moment-là.
+  // Un créneau choisi n'est valable que pour la prestation de ce moment-là.
   function changeService(id: string, name: string) {
     if (service?.id !== id) setSlot(null);
     setService({ id, name });
-  }
-
-  function changeLocation(next: string | null) {
-    if (slot && next !== null && slot.locationLabel !== next) setSlot(null);
-    setLocation(next);
   }
 
   function changeDay(next: DayKey) {
@@ -73,17 +67,6 @@ export function BookingPage() {
           serviceId={service?.id ?? null}
           focusOnMount={hasNavigated}
           onChange={changeService}
-          onNext={() => goTo("location")}
-        />
-      );
-    }
-    if (step === "location") {
-      return (
-        <LocationStep
-          location={location}
-          focusOnMount={hasNavigated}
-          onChange={changeLocation}
-          onBack={() => goTo("service")}
           onNext={() => goTo("slot")}
         />
       );
@@ -92,14 +75,13 @@ export function BookingPage() {
       return (
         <SlotStep
           serviceId={service.id}
-          location={location}
           day={day}
           slot={slot}
           notice={slotNotice}
           focusOnMount={hasNavigated}
           onDayChange={changeDay}
           onSlotChange={setSlot}
-          onBack={() => goTo("location")}
+          onBack={() => goTo("service")}
           onNext={() => goTo("contact")}
         />
       );

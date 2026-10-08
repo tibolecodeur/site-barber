@@ -2,10 +2,10 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { Button } from "@/components/Button";
 import { cx } from "@/lib/cx";
 
-export const STEP_COUNT = 5;
+export const STEP_COUNT = 4;
 
 type StepFrameProps = {
-  /** Numéro de l'étape (1 à 5) ; absent pour l'écran de confirmation. */
+  /** Numéro de l'étape (1 à 4) ; absent pour l'écran de confirmation. */
   number?: number;
   title: string;
   /** Place le focus sur le titre à l'affichage (après un changement d'étape). */
@@ -36,7 +36,7 @@ export function StepFrame({ number, title, focusOnMount, children }: StepFramePr
             Étape {number} sur {STEP_COUNT}
           </p>
           {/* Barre de progression décorative : le texte au-dessus porte l'information. */}
-          <div aria-hidden="true" className="grid grid-cols-5 gap-1">
+          <div aria-hidden="true" className="grid grid-cols-4 gap-1">
             {Array.from({ length: STEP_COUNT }, (_, index) => (
               <span key={index} className={cx("h-1.5", index < number ? "bg-ink" : "bg-ink/15")} />
             ))}

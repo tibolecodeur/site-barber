@@ -27,8 +27,6 @@ const DAY_CLASS =
 
 type SlotStepProps = {
   serviceId: string;
-  /** Filtre de l'étape 2 ; null = tous les lieux. */
-  location: string | null;
   day: DayKey | null;
   slot: AvailableSlot | null;
   /** Message affiché en arrivant (ex. créneau pris entre-temps). */
@@ -42,7 +40,7 @@ type SlotStepProps = {
 
 /** Étape 3 : jour (4 semaines à venir) puis créneau libre. */
 export function SlotStep(props: SlotStepProps) {
-  const { serviceId, location, day, slot, notice, focusOnMount } = props;
+  const { serviceId, day, slot, notice, focusOnMount } = props;
   const [error, setError] = useState<string>();
   const slotsRef = useRef<HTMLDivElement>(null);
 
@@ -75,7 +73,7 @@ export function SlotStep(props: SlotStepProps) {
   }
 
   return (
-    <StepFrame number={3} title="Quel jour, quelle heure ?" focusOnMount={focusOnMount}>
+    <StepFrame number={2} title="Quel jour, quelle heure ?" focusOnMount={focusOnMount}>
       {notice && <ErrorMessage>{notice}</ErrorMessage>}
       <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-8">
         <fieldset className="flex flex-col gap-2">
@@ -127,7 +125,6 @@ export function SlotStep(props: SlotStepProps) {
         <div ref={slotsRef} className="flex flex-col gap-3">
           <SlotList
             day={day}
-            location={location}
             state={slots}
             selected={slot}
             error={error}
@@ -147,7 +144,6 @@ export function SlotStep(props: SlotStepProps) {
 
 type SlotListProps = {
   day: DayKey | null;
-  location: string | null;
   state: AsyncResult<AvailableSlot[]>;
   selected: AvailableSlot | null;
   error?: string;
@@ -155,7 +151,7 @@ type SlotListProps = {
 };
 
 /** Créneaux du jour choisi, avec les états chargement, erreur et « aucun créneau ». */
-function SlotList({ day, location, state, selected, error, onSelect }: SlotListProps) {
+function SlotList({ day, state, selected, error, onSelect }: SlotListProps) {
   if (day === null || state.status === "idle") {
     return (
       <div className="flex flex-col gap-2">
@@ -172,16 +168,12 @@ function SlotList({ day, location, state, selected, error, onSelect }: SlotListP
     );
   }
 
-  const slots = state.data.filter((s) => location === null || s.locationLabel === location);
+  const slots = state.data;
   if (slots.length === 0) {
     return (
       <EmptyMessage>
         <p className="font-semibold">Aucun créneau libre le {formatDayKey(day)}.</p>
-        <p>
-          {location !== null && state.data.length > 0
-            ? `Il reste des créneaux dans l'autre lieu : reviens à l'étape précédente et choisis « Peu importe », ou essaie un autre jour.`
-            : "Essaie un autre jour."}
-        </p>
+        <p>Essaie un autre jour.</p>
       </EmptyMessage>
     );
   }

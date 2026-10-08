@@ -27,10 +27,15 @@ export type Service = {
   priceLabel: string | null;
 };
 
-/** Ligne renvoyée par la RPC `get_available_slots`. */
+/**
+ * Ligne renvoyée par la RPC `get_available_slots` : chaque créneau porte son lieu, fixé par le
+ * barber dans sa disponibilité. Le client choisit un créneau, jamais un lieu.
+ * Libellé public uniquement : l'adresse privée n'est jamais renvoyée ici.
+ */
 export type AvailableSlot = {
   startsAt: string;
   endsAt: string;
+  locationId: string;
   locationLabel: string;
 };
 
@@ -38,6 +43,8 @@ export type AvailableSlot = {
 export type NewBooking = {
   serviceId: string;
   startsAt: string;
+  /** Lieu du créneau choisi : la base vérifie qu'il correspond toujours à la disponibilité. */
+  locationId: string;
   firstName: string;
   lastName: string;
   phone?: string;
@@ -114,19 +121,6 @@ export async function getServices(): Promise<Service[]> {
 }
 
 /**
- * Libellés publics des lieux, pour l'étape « Où ? » (filtre sur les créneaux).
- * TODO: brancher Supabase. L'anonyme ne lit PAS la table `locations` (adresse privée) :
- * ces libellés viendront d'une constante du front ou d'une RPC dédiée, à décider.
- */
-export async function getLocationLabels(): Promise<string[]> {
-  await fakeLatency();
-  return fakeDb()
-    .locations.filter((l) => l.active)
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((l) => l.public_label);
-}
-
-/**
  * Copie de `private.max_booking_time` : maintenant + 4 semaines, à la même heure d'horloge à
  * Paris (même si un changement d'heure tombe entre les deux).
  */
@@ -152,8 +146,7 @@ function computeSlots(serviceId: string, day: DayKey, now: Date) {
   const earliest = now.getTime() + BOOKING_RULES.minNoticeHours * HOUR_MS;
   const latest = maxBookingTime(now);
 
-  const slots: { startsAt: string; endsAt: string; locationId: string; locationLabel: string }[] =
-    [];
+  const slots: AvailableSlot[] = [];
   for (const availability of db.availabilities) {
     const location = db.locations.find((l) => l.id === availability.location_id && l.active);
     if (!location) continue;
@@ -185,11 +178,7 @@ function computeSlots(serviceId: string, day: DayKey, now: Date) {
 /** RPC `get_available_slots(p_service_id, p_day)` : créneaux libres d'un jour (heure de Paris). */
 export async function getAvailableSlots(serviceId: string, day: DayKey): Promise<AvailableSlot[]> {
   await fakeLatency();
-  return computeSlots(serviceId, day, new Date()).map(({ startsAt, endsAt, locationLabel }) => ({
-    startsAt,
-    endsAt,
-    locationLabel,
-  }));
+  return computeSlots(serviceId, day, new Date());
 }
 
 /** RPC `create_booking` : crée le RDV et renvoie le récap (dont l'adresse et le lien d'annulation). */
@@ -221,8 +210,10 @@ export async function createBooking(input: NewBooking): Promise<BookingReceipt> 
     throw new BookingError("too_far");
   }
 
+  // Le créneau doit exister, libre, ET dans le lieu affiché au client : si le barber a changé
+  // le lieu de la dispo entre-temps, le client ne réserve pas un lieu qu'il n'a pas vu.
   const slot = computeSlots(service.id, parisDayKey(input.startsAt), now).find(
-    (s) => Date.parse(s.startsAt) === startsAtMs,
+    (s) => Date.parse(s.startsAt) === startsAtMs && s.locationId === input.locationId,
   );
   if (!slot) throw new BookingError("slot_unavailable");
 

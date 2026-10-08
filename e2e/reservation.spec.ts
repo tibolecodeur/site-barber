@@ -35,8 +35,8 @@ async function choisirUnJourAvecCreneaux(page: Page): Promise<Locator> {
   throw new Error("Aucun jour avec des créneaux dans les 4 semaines");
 }
 
-/** Étapes 1 et 2 : prestation « Coupe », lieu donné (ou « Peu importe »). */
-async function allerAuxCreneaux(page: Page, lieu = "Peu importe") {
+/** Étape 1 : prestation « Coupe ». On arrive directement au choix du jour et du créneau. */
+async function allerAuxCreneaux(page: Page) {
   await page.goto("/reserver");
   await expect(page.getByRole("heading", { level: 2, name: "Quelle prestation ?" })).toBeVisible();
   await page
@@ -44,13 +44,25 @@ async function allerAuxCreneaux(page: Page, lieu = "Peu importe") {
     .first()
     .check();
   await continuer(page);
-  await expect(page.getByRole("heading", { level: 2, name: "Où ?" })).toBeFocused();
-  await page.getByRole("radio", { name: new RegExp(`^${lieu}`) }).check();
-  await continuer(page);
   await expect(
     page.getByRole("heading", { level: 2, name: "Quel jour, quelle heure ?" }),
   ).toBeFocused();
+  await expect(page.getByText("Étape 2 sur 4")).toBeVisible();
 }
+
+/** Valeur d'une ligne du récapitulatif (<dt>libellé</dt><dd>valeur</dd>). */
+function valeurDuRecap(page: Page, libelle: string): Locator {
+  return page
+    .locator("dt", { hasText: new RegExp(`^${libelle}$`) })
+    .locator("xpath=following-sibling::dd[1]");
+}
+
+/** Texte visible d'un créneau (son libellé), espaces normalisés. */
+async function texteDuCreneau(creneau: Locator): Promise<string> {
+  return creneau.evaluate((el) => el.closest("label")!.textContent!.replace(/\s+/g, " ").trim());
+}
+
+const LIEU_EN_FIN = /(Chez lui|Chez ses parents)$/;
 
 test("parcours complet : réserver, puis annuler avec le lien personnel", async ({ page }) => {
   const erreurs: string[] = [];
@@ -58,21 +70,28 @@ test("parcours complet : réserver, puis annuler avec le lien personnel", async 
 
   // Étape 1 : impossible de continuer sans prestation.
   await page.goto("/reserver");
-  await expect(page.getByText("Étape 1 sur 5")).toBeVisible();
+  await expect(page.getByText("Étape 1 sur 4")).toBeVisible();
   await continuer(page);
   await expect(page.getByText("Choisis une prestation pour continuer.")).toBeVisible();
 
   await allerAuxCreneaux(page);
 
-  // Étape 3 : jour puis créneau.
+  // Étape 2 : jour puis créneau. Le client ne choisit jamais de lieu.
+  await expect(page.getByRole("heading", { name: "Où ?" })).toHaveCount(0);
+  await expect(page.getByRole("radio", { name: /Peu importe/ })).toHaveCount(0);
   await continuer(page);
   await expect(page.getByText("Choisis un jour, puis un créneau.")).toBeVisible();
   const creneaux = await choisirUnJourAvecCreneaux(page);
   const premier = creneaux.getByRole("radio").first();
+  // Le créneau affiche le libellé public de son lieu, jamais l'adresse.
+  const texte = await texteDuCreneau(premier);
+  const lieu = LIEU_EN_FIN.exec(texte)?.[1];
+  expect(lieu, `lieu affiché sur le créneau « ${texte} »`).toBeDefined();
+  await expect(creneaux).not.toContainText("fictive");
   await premier.check();
   await continuer(page);
 
-  // Étape 4 : coordonnées, avec validation.
+  // Étape 3 : coordonnées, avec validation.
   await expect(page.getByRole("heading", { level: 2, name: "Tes coordonnées" })).toBeFocused();
   await continuer(page);
   await expect(page.getByText("Indique ton prénom.")).toBeVisible();
@@ -86,14 +105,17 @@ test("parcours complet : réserver, puis annuler avec le lien personnel", async 
   await page.getByRole("checkbox", { name: /J'accepte/ }).check();
   await continuer(page);
 
-  // Étape 5 : récapitulatif.
+  // Étape 4 : récapitulatif, avec le lieu du créneau choisi et sans adresse.
   await expect(page.getByRole("heading", { level: 2, name: "Vérifie et confirme" })).toBeFocused();
   await expect(page.getByText("Zoé Durand")).toBeVisible();
   await expect(page.getByText("06 39 98 00 10")).toBeVisible();
+  await expect(valeurDuRecap(page, "Lieu")).toHaveText(lieu!);
+  await expect(page.getByText(/adresse fictive/)).toHaveCount(0);
   await page.getByRole("button", { name: "Confirmer la réservation" }).click();
 
-  // Confirmation : adresse exacte et lien d'annulation.
+  // Confirmation : lieu du créneau, adresse exacte et lien d'annulation.
   await expect(page.getByRole("heading", { level: 2, name: "C'est réservé !" })).toBeFocused();
+  await expect(valeurDuRecap(page, "Lieu")).toHaveText(lieu!);
   await expect(page.getByText(/adresse fictive/)).toBeVisible();
   await expect(page.getByText(/\/annuler\?token=[0-9a-f-]{36}$/)).toBeVisible();
 
@@ -151,8 +173,10 @@ test("coordonnées : champs à 16 px, zones tactiles de 44 px, honeypot hors éc
   await expect(page.getByLabel("Email")).toHaveAttribute("type", "email");
 });
 
-test("aucun créneau un lundi ; le filtre de lieu propose l'autre lieu", async ({ page }) => {
-  await allerAuxCreneaux(page, "Chez ses parents");
+test("aucun créneau un lundi ; chaque créneau affiche son lieu, jamais l'adresse", async ({
+  page,
+}) => {
+  await allerAuxCreneaux(page);
 
   // Le dernier lundi du calendrier n'est jamais aujourd'hui (seul jour à dispo exceptionnelle).
   await toucherJour(page.getByRole("radio", { name: /^lundi / }).last());
@@ -161,17 +185,30 @@ test("aucun créneau un lundi ; le filtre de lieu propose l'autre lieu", async (
   await continuer(page);
   await expect(page.getByText("Choisis un créneau.")).toBeVisible();
 
-  // Le mardi, seul « Chez lui » est ouvert : le filtre « Chez ses parents » vide la liste.
-  await toucherJour(page.getByRole("radio", { name: /^mardi / }).last());
-  await expect(page.getByText(/^Aucun créneau libre le mardi/)).toBeVisible();
-  await expect(page.getByText(/Il reste des créneaux dans l'autre lieu/)).toBeVisible();
+  // Le samedi, deux dispos dans deux lieux : 10 h–13 h « Chez ses parents », 14 h–18 h
+  // « Chez lui ». Chaque créneau porte le lieu de SA dispo.
+  await toucherJour(page.getByRole("radio", { name: /^samedi / }).last());
+  const creneaux = page.getByRole("group", { name: /^Créneaux libres le samedi/ });
+  await expect(creneaux.getByRole("radio")).toHaveCount(7);
+  const textes = await creneaux
+    .getByRole("radio")
+    .evaluateAll((els) =>
+      els.map((el) => el.closest("label")!.textContent!.replace(/\s+/g, " ").trim()),
+    );
+  expect(textes).toEqual([
+    "10:00 – 11:00Chez ses parents",
+    "11:00 – 12:00Chez ses parents",
+    "12:00 – 13:00Chez ses parents",
+    "14:00 – 15:00Chez lui",
+    "15:00 – 16:00Chez lui",
+    "16:00 – 17:00Chez lui",
+    "17:00 – 18:00Chez lui",
+  ]);
+  await expect(creneaux).not.toContainText("fictive");
 
-  // Retour à « Peu importe » : les créneaux du mardi apparaissent.
+  // « Retour » ramène à la prestation : il n'y a plus d'étape de lieu.
   await page.getByRole("button", { name: "Retour" }).click();
-  await page.getByRole("radio", { name: /^Peu importe/ }).check();
-  await continuer(page);
-  await expect(page.getByRole("radio", { name: /^mardi / }).last()).toBeChecked();
-  await expect(page.getByRole("group", { name: /^Créneaux libres le mardi/ })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2, name: "Quelle prestation ?" })).toBeFocused();
 });
 
 /** Réservation rapide jusqu'à l'écran de confirmation (prestation, premier créneau libre). */

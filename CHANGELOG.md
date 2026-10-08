@@ -61,7 +61,7 @@ Ce projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
   - tests Vitest des composants et hooks, test Playwright mobile du hero.
 - Maquette fonctionnelle de tous les écrans, sur une fausse base en mémoire (aucun appel
   Supabase) : couche données `src/features/*/data.ts` calquée sur les RPC et les tables ;
-  parcours `/reserver` en étapes (prestation, lieu en filtre, jour et créneau, coordonnées avec
+  parcours `/reserver` en étapes (prestation, jour et créneau portant le lieu, coordonnées avec
   honeypot, récapitulatif, confirmation avec lien d'annulation) ; états de `/annuler` ;
   espace admin (connexion, tableau de bord, RDV, disponibilités, galerie, mot de passe,
   déconnexion) avec un faux état connecté réservé au développement, absent du build de

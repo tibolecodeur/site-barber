@@ -54,7 +54,7 @@ export function ContactStep(props: ContactStepProps) {
   }
 
   return (
-    <StepFrame number={4} title="Tes coordonnées" focusOnMount={focusOnMount}>
+    <StepFrame number={3} title="Tes coordonnées" focusOnMount={focusOnMount}>
       {/* noValidate : on affiche nos propres messages, au tutoiement, sous chaque champ. */}
       <form onSubmit={handleSubmit} noValidate className="relative flex flex-col gap-5">
         <Field

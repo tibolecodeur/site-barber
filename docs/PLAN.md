@@ -44,14 +44,30 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 ## Phase 5 — Réservation client
 
 - [ ] Parcours complet · Confirmation + .ics + lien d'annulation · Page d'annulation
-      _(maquette fonctionnelle faite sur fausse base (src/lib/fakeDb.ts) : parcours en étapes,
+      _(maquette fonctionnelle faite sur fausse base (src/lib/fakeDb.ts) : parcours en 4 étapes
+      (prestation, jour et créneau avec le lieu affiché, coordonnées, récap),
       confirmation avec lien d'annulation et bouton « Copier le lien » (aucun e-mail de
       confirmation : la page invite à copier le lien ou à faire une capture d'écran), 4 états de
       /annuler. Reste : branchement Supabase)_
-- [ ] **Lieux publics pour l'étape « Où ? »** : nouvelle fonction RPC `security definer` qui ne
-      renvoie QUE `id` + `public_label` des lieux actifs (jamais `private_address`) ; l'anonyme
-      ne lit toujours pas la table `locations`. Migration + tests pgTAP (dont « l'anonyme ne
-      voit pas l'adresse »), puis `getLocationLabels()` à brancher dessus.
+- [ ] **Branchement SQL des créneaux (règle : le client choisit un créneau, jamais un lieu)** :
+      vérifié dans `…_fonctions_rpc.sql`, les RPC ne collent pas encore au front. Nouvelle
+      migration (sans toucher aux anciennes), tests pgTAP mis à jour :
+  - `get_available_slots` renvoie `starts_at, ends_at, location_label` mais PAS `location_id`
+    (pourtant présent dans `private.compute_slots`) : l'ajouter au `returns table` (changement
+    de type de retour : `drop function` puis `create`, et rejouer REVOKE / GRANT). Toujours
+    jamais `private_address`.
+  - `create_booking` n'a pas de paramètre de lieu : il DÉDUIT le lieu du créneau
+    (`compute_slots … limit 1`, sans ambiguïté puisque deux dispos ne se chevauchent jamais).
+    Ajouter `p_location_id uuid` et refuser (`slot_unavailable`) s'il diffère du lieu déduit :
+    si le barber change le lieu d'une dispo entre l'affichage et la réservation, le client ne
+    réserve pas un lieu qu'il n'a pas vu. Nouvelle signature : `drop` de l'ancienne, REVOKE /
+    GRANT de la nouvelle. Le front (`createBooking`) envoie déjà `locationId`.
+  - pgTAP : `location_id` présent dans les créneaux, mauvais `p_location_id` refusé, l'anonyme
+    ne voit toujours pas l'adresse ni la table `locations`.
+- [x] ~~Fonction des lieux publics (`id` + `public_label`)~~ : **plus nécessaire**, le lieu (id
+      et libellé public) arrive avec chaque créneau via `get_available_slots`. Seul cas qui la
+      justifierait encore : afficher les lieux hors du parcours (ex. section « Où me trouver »
+      de l'accueil), à décider le moment venu.
 - [ ] **Règle de révélation de l'adresse privée à décider AVANT le branchement de la
       réservation** (aujourd'hui `create_booking` la renvoie tout de suite : voir l'étape
       « Protéger l'adresse privée » de la phase 8 et le risque n° 1 de l'ADR 0002).

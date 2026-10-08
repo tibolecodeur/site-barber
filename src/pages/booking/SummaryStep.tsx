@@ -57,6 +57,7 @@ export function SummaryStep(props: SummaryStepProps) {
       const receipt = await createBooking({
         serviceId: props.serviceId,
         startsAt: slot.startsAt,
+        locationId: slot.locationId,
         firstName: contact.firstName,
         lastName: contact.lastName,
         phone: contact.phone,
@@ -77,7 +78,7 @@ export function SummaryStep(props: SummaryStepProps) {
   }
 
   return (
-    <StepFrame number={5} title="Vérifie et confirme" focusOnMount={props.focusOnMount}>
+    <StepFrame number={4} title="Vérifie et confirme" focusOnMount={props.focusOnMount}>
       <BookingSummary
         rows={[
           ["Prestation", props.serviceName],
