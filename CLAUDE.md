@@ -91,6 +91,9 @@ Décisions de design validées : @docs/DESIGN.md
 - Toujours : mobile d'abord (vérifier à 375 px puis desktop), accessibilité (contrastes AA,
   focus visible, labels, navigation clavier), images en `loading="lazy"`, et toute animation
   désactivée si `prefers-reduced-motion`.
+- Polices : uniquement auto-hébergées (paquets `@fontsource`, fichiers servis par notre
+  domaine). Aucune police chargée depuis un CDN externe (Google Fonts, Fontshare…) : RGPD,
+  l'adresse IP du visiteur ne doit pas partir chez un tiers.
 
 ### Skills de design (design-taste-frontend, impeccable)
 
