@@ -1,6 +1,6 @@
 import { useState, type SubmitEvent } from "react";
 import { Choice } from "@/components/Choice";
-import { ErrorMessage, LoadingMessage } from "@/components/StatusMessage";
+import { EmptyMessage, ErrorMessage, LoadingMessage } from "@/components/StatusMessage";
 import { getServices } from "@/features/booking/data";
 import { useAsync } from "@/lib/useAsync";
 import { GroupError, StepActions, StepFrame } from "@/pages/booking/StepFrame";
@@ -33,10 +33,16 @@ export function ServiceStep({ serviceId, focusOnMount, onChange, onNext }: Servi
       )}
       {services.status === "error" && (
         <ErrorMessage onRetry={services.reload}>
-          Impossible de charger les prestations. Vérifie ta connexion, puis réessaie.
+          Impossible de charger les prestations pour le moment. Réessaie dans quelques instants.
         </ErrorMessage>
       )}
-      {services.status === "success" && (
+      {services.status === "success" && services.data.length === 0 && (
+        <EmptyMessage>
+          <p className="font-semibold">Aucune prestation disponible pour l'instant.</p>
+          <p>Reviens un peu plus tard.</p>
+        </EmptyMessage>
+      )}
+      {services.status === "success" && services.data.length > 0 && (
         <form onSubmit={handleSubmit} noValidate className="flex flex-col gap-6">
           <fieldset
             className="flex flex-col gap-3"

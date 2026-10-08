@@ -10,7 +10,22 @@ import {
   type NewBooking,
 } from "@/features/booking/data";
 import { formatTime } from "@/lib/dates";
-import { FAKE_CANCEL_TOKENS, resetFakeDb } from "@/lib/fakeDb";
+import { FAKE_CANCEL_TOKENS, fakeDb, resetFakeDb } from "@/lib/fakeDb";
+import { getSupabase, SupabaseConfigError } from "@/lib/supabase";
+import { fakeSupabaseClient, SERVICE_ROWS, type FakeQueryResult } from "@/test/fakeSupabase";
+
+// getServices lit la vraie table : le client est simulé, aucune requête ne part.
+vi.mock("@/lib/supabase", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/supabase")>()),
+  getSupabase: vi.fn(),
+}));
+
+/** Simule la réponse de Supabase ; renvoie la liste des appels faits sur le client. */
+function mockSupabase(result: FakeQueryResult) {
+  const fake = fakeSupabaseClient(result);
+  vi.mocked(getSupabase).mockReturnValue(fake.client);
+  return fake.calls;
+}
 
 /**
  * Horloge figée : mardi 13 octobre 2026, 8 h à Paris. Données de démonstration (fakeDb) :
@@ -30,7 +45,8 @@ beforeEach(async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(NOW);
   resetFakeDb(NOW);
-  cutId = (await getServices())[0]!.id;
+  // Créneaux et réservation sont encore factices : on lit la prestation dans la fausse base.
+  cutId = fakeDb().services[0]!.id;
   homeId = (await getAvailableSlots(cutId, NEXT_TUESDAY))[0]!.locationId;
 });
 
@@ -56,10 +72,52 @@ async function expectBookingError(promise: Promise<unknown>, code: string) {
 }
 
 describe("getServices", () => {
-  it("renvoie les prestations actives dans l'ordre, sans prix inventé", async () => {
+  it("lit les prestations actives, triées, avec les seules colonnes utiles", async () => {
+    const calls = mockSupabase({ data: SERVICE_ROWS, error: null });
+
     expect(await getServices()).toEqual([
-      { id: expect.any(String), name: "Coupe", durationMin: 60, priceLabel: null },
-      { id: expect.any(String), name: "Coupe + barbe", durationMin: 60, priceLabel: null },
+      { id: SERVICE_ROWS[0]!.id, name: "Coupe", durationMin: 60, priceLabel: null },
+      { id: SERVICE_ROWS[1]!.id, name: "Coupe + barbe", durationMin: 60, priceLabel: "20 €" },
+    ]);
+    expect(calls.map(({ method, args }) => [method, ...args])).toEqual([
+      ["from", "services"],
+      ["select", "id, name, duration_min, price_label"],
+      ["eq", "active", true],
+      ["order", "sort_order"],
+      ["order", "name"],
+      ["abortSignal", expect.any(AbortSignal)],
+    ]);
+  });
+
+  it("renvoie une liste vide s'il n'y a aucune prestation", async () => {
+    mockSupabase({ data: [], error: null });
+    expect(await getServices()).toEqual([]);
+  });
+
+  it("rejette en cas d'erreur réseau ou de base", async () => {
+    mockSupabase({ data: null, error: { message: "TypeError: Failed to fetch" } });
+    await expect(getServices()).rejects.toThrow(/Lecture des prestations impossible/);
+  });
+
+  it("rejette sans planter si les variables Supabase manquent", async () => {
+    vi.mocked(getSupabase).mockImplementation(() => {
+      throw new SupabaseConfigError();
+    });
+    await expect(getServices()).rejects.toBeInstanceOf(SupabaseConfigError);
+  });
+
+  it("transmet les prestations lues à la fausse base des créneaux (pont provisoire)", async () => {
+    mockSupabase({ data: SERVICE_ROWS, error: null });
+    await getServices();
+    await getServices(); // relu : mise à jour, pas de doublon
+    const slots = await getAvailableSlots(SERVICE_ROWS[0]!.id, NEXT_TUESDAY);
+    expect(slots.length).toBeGreaterThan(0);
+    // Les prestations de démonstration restent : les faux RDV y font référence.
+    expect(fakeDb().services.map((s) => s.id)).toEqual([
+      cutId,
+      expect.any(String),
+      SERVICE_ROWS[0]!.id,
+      SERVICE_ROWS[1]!.id,
     ]);
   });
 });

@@ -48,6 +48,16 @@ describe("BookingPage : chargement et erreurs", () => {
     expect(await screen.findByRole("radio", { name: /Coupe/ })).toBeInTheDocument();
   });
 
+  it("affiche « Aucune prestation disponible » si la liste est vide, sans formulaire", async () => {
+    vi.mocked(bookingData.getServices).mockResolvedValue([]);
+    renderPage();
+
+    expect(
+      await screen.findByText("Aucune prestation disponible pour l'instant."),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continuer" })).not.toBeInTheDocument();
+  });
+
   it("affiche une erreur de chargement des créneaux et permet de réessayer", async () => {
     const user = userEvent.setup();
     vi.mocked(bookingData.getServices).mockResolvedValue([SERVICE]);

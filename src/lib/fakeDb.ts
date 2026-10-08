@@ -282,6 +282,24 @@ export function resetFakeDb(now: Date = new Date()): FakeDb {
 }
 
 /**
+ * TODO: brancher Supabase. Pont provisoire : les prestations viennent de la vraie table
+ * `services` (uuid réels), mais créneaux et réservations sont encore calculés ici. Sans cette
+ * copie, la fausse base ne reconnaîtrait pas la prestation choisie et n'afficherait aucun
+ * créneau. Ajout ou mise à jour, jamais de suppression : les faux RDV (annulation, admin)
+ * pointent encore vers les prestations de démonstration. À supprimer avec ce fichier.
+ */
+export function syncFakeServices(
+  services: Pick<ServiceRow, "id" | "name" | "duration_min" | "price_label">[],
+): void {
+  const db = fakeDb();
+  for (const service of services) {
+    const existing = db.services.find((s) => s.id === service.id);
+    if (existing) Object.assign(existing, service, { active: true });
+    else db.services.push({ ...service, active: true, sort_order: db.services.length + 1 });
+  }
+}
+
+/**
  * Latence réseau simulée, pour voir les états « chargement » pendant le développement.
  * Nulle dans les tests unitaires (Vitest définit MODE = "test").
  */

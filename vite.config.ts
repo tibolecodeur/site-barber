@@ -40,14 +40,17 @@ export default defineConfig({
     css: true,
     // Les tests end-to-end sont joués par Playwright, pas par Vitest.
     exclude: ["node_modules", "dist", "e2e"],
+    // Vitest lit .env.local comme Vite : on écrase les variables Supabase pour qu'aucun test
+    // ne parte jamais vers la vraie base. Un test qui en a besoin met des valeurs factices
+    // (vi.stubEnv) ou simule le client.
+    env: { VITE_SUPABASE_URL: "", VITE_SUPABASE_ANON_KEY: "" },
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
       // Objectif de CLAUDE.md : 80 % sur la logique métier et les utilitaires.
       include: ["src/features/**/*.{ts,tsx}", "src/lib/**/*.{ts,tsx}"],
-      // Exclus : pas de logique métier à couvrir, seulement du câblage non testable
-      // sans réseau ni vraies clés. Le seuil doit mesurer la logique, pas la config.
-      exclude: ["src/lib/supabase.ts"],
+      // Exclus : des types seuls, sans code exécuté.
+      exclude: ["src/lib/database.types.ts"],
       thresholds: { lines: 80, functions: 80, branches: 80, statements: 80 },
     },
   },
