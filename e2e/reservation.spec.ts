@@ -173,3 +173,68 @@ test("aucun créneau un lundi ; le filtre de lieu propose l'autre lieu", async (
   await expect(page.getByRole("radio", { name: /^mardi / }).last()).toBeChecked();
   await expect(page.getByRole("group", { name: /^Créneaux libres le mardi/ })).toBeVisible();
 });
+
+/** Réservation rapide jusqu'à l'écran de confirmation (prestation, premier créneau libre). */
+async function reserverJusquALaConfirmation(page: Page) {
+  await allerAuxCreneaux(page);
+  const creneaux = await choisirUnJourAvecCreneaux(page);
+  await creneaux.getByRole("radio").first().check();
+  await continuer(page);
+  await page.getByLabel("Prénom").fill("Zoé");
+  await page.getByLabel("Nom", { exact: true }).fill("Durand");
+  await page.getByLabel("Email").fill("zoe@example.com");
+  await page.getByRole("checkbox", { name: /J'accepte/ }).check();
+  await continuer(page);
+  await page.getByRole("button", { name: "Confirmer la réservation" }).click();
+  await expect(page.getByRole("heading", { level: 2, name: "C'est réservé !" })).toBeVisible();
+}
+
+/**
+ * Faux presse-papiers, installé avant le chargement de la page : on vérifie ce que NOTRE code
+ * copie, de la même façon dans Chromium et WebKit (lire le vrai presse-papiers depuis un test
+ * n'est possible que dans Chromium, avec une permission).
+ */
+async function simulerPressePapiers(page: Page, { refuse }: { refuse: boolean }) {
+  await page.addInitScript((refuser) => {
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        writeText: async (texte: string) => {
+          if (refuser) throw new DOMException("refusé", "NotAllowedError");
+          (window as unknown as { __copie: string }).__copie = texte;
+        },
+      },
+    });
+  }, refuse);
+}
+
+test("confirmation : « Copier le lien » copie le lien d'annulation", async ({ page }) => {
+  await simulerPressePapiers(page, { refuse: false });
+  await reserverJusquALaConfirmation(page);
+
+  // Pas d'e-mail : la page invite à garder le lien ou à faire une capture d'écran.
+  await expect(page.getByText(/pas d'e-mail de confirmation/)).toBeVisible();
+  await expect(page.getByText(/capture d'écran/).first()).toBeVisible();
+
+  const bouton = page.getByRole("button", { name: "Copier le lien" });
+  expect((await bouton.boundingBox())!.height).toBeGreaterThanOrEqual(44);
+  await bouton.click();
+
+  await expect(page.getByRole("status").filter({ hasText: "Lien copié." })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Lien copié" })).toBeVisible();
+  const lienAffiche = await page.locator("#cancel-link-url").textContent();
+  const copie = await page.evaluate(() => (window as unknown as { __copie: string }).__copie);
+  expect(copie).toMatch(/^http:\/\/localhost:5173\/annuler\?token=[0-9a-f-]{36}$/);
+  expect(copie).toBe(lienAffiche?.trim());
+});
+
+test("confirmation : si la copie est refusée, la page propose de copier à la main", async ({
+  page,
+}) => {
+  await simulerPressePapiers(page, { refuse: true });
+  await reserverJusquALaConfirmation(page);
+
+  await page.getByRole("button", { name: "Copier le lien" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Copie impossible/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Copier le lien" })).toBeVisible();
+});

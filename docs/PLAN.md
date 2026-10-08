@@ -45,8 +45,18 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 
 - [ ] Parcours complet · Confirmation + .ics + lien d'annulation · Page d'annulation
       _(maquette fonctionnelle faite sur fausse base (src/lib/fakeDb.ts) : parcours en étapes,
-      confirmation avec lien d'annulation, 4 états de /annuler. Restent : branchement Supabase,
-      .ics, origine des libellés de lieux pour l'étape « Où ? » (l'anonyme ne lit pas `locations`))_
+      confirmation avec lien d'annulation et bouton « Copier le lien » (aucun e-mail de
+      confirmation : la page invite à copier le lien ou à faire une capture d'écran), 4 états de
+      /annuler. Reste : branchement Supabase)_
+- [ ] **Lieux publics pour l'étape « Où ? »** : nouvelle fonction RPC `security definer` qui ne
+      renvoie QUE `id` + `public_label` des lieux actifs (jamais `private_address`) ; l'anonyme
+      ne lit toujours pas la table `locations`. Migration + tests pgTAP (dont « l'anonyme ne
+      voit pas l'adresse »), puis `getLocationLabels()` à brancher dessus.
+- [ ] **Règle de révélation de l'adresse privée à décider AVANT le branchement de la
+      réservation** (aujourd'hui `create_booking` la renvoie tout de suite : voir l'étape
+      « Protéger l'adresse privée » de la phase 8 et le risque n° 1 de l'ADR 0002).
+- [ ] **Contact Instagram sur l'écran « Trop tard pour annuler en ligne »** de `/annuler`
+      (lien vers le compte du barber, zone tactile 44 px) dès que le compte est fourni.
 - [x] Tests Playwright mobile _(parcours /reserver et 4 états de /annuler, sur fausse base)_
 - [ ] **`<meta name="robots" content="noindex">` sur `/admin`, `/annuler` et la 404**
       (prop à ajouter à `PageMeta`). **À faire avant la mise en ligne de la réservation.**
@@ -80,6 +90,14 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
       validation de la réservation par le barber. Aujourd'hui `create_booking` la renvoie tout de
       suite : n'importe qui peut l'obtenir en réservant avec un contact inventé puis en annulant
       (risque n° 1 de l'ADR 0002). **Bloquant pour la mise en ligne.**
+
+## Backlog (non planifié)
+
+- [ ] Bouton « Ajouter à mon calendrier » (.ics) sur la confirmation de réservation (SPEC V1).
+- [ ] Calendrier de /reserver : griser les jours sans créneau (une requête pour les 4 semaines,
+      jours sans dispo en `aria-disabled`).
+- [ ] Annulation d'un RDV par le barber, en phase admin : nouvelle RPC (motif, statut
+      `cancelled`), tests pgTAP (seul l'admin peut l'appeler).
 
 ## V2
 

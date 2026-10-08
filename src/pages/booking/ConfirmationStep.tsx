@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { Link } from "react-router";
-import { ButtonLink } from "@/components/Button";
+import { Button, ButtonLink } from "@/components/Button";
 import type { BookingReceipt } from "@/features/booking/data";
 import { BOOKING_RULES } from "@/lib/bookingRules";
 import { formatLongDay, formatTime } from "@/lib/dates";
@@ -34,14 +35,21 @@ export function ConfirmationStep({ receipt, focusOnMount }: ConfirmationStepProp
 
       <section aria-labelledby="cancel-link-title" className="flex flex-col gap-3">
         <h3 id="cancel-link-title">Ton lien d'annulation</h3>
-        <p>
-          Garde ce lien précieusement (capture d'écran ou favori) : c'est le seul moyen d'annuler en
-          ligne, jusqu'à {BOOKING_RULES.cancelNoticeHours} h avant le rendez-vous. Ne le partage
-          pas.
+        <p className="font-semibold">
+          Tu ne recevras pas d'e-mail de confirmation : copie ce lien ou fais une capture d'écran de
+          cette page.
         </p>
-        <p className="border border-ink/15 bg-surface p-3 text-sm break-all select-all">
+        <p>
+          C'est le seul moyen d'annuler en ligne, jusqu'à {BOOKING_RULES.cancelNoticeHours} h avant
+          le rendez-vous. Ne le partage pas.
+        </p>
+        <p
+          id="cancel-link-url"
+          className="border border-ink/15 bg-surface p-3 text-sm break-all select-all"
+        >
           {cancelUrl}
         </p>
+        <CopyLinkButton url={cancelUrl} />
         <p>
           <Link to={cancelPath} className="link inline-flex min-h-tap items-center">
             Ouvrir ma page d'annulation
@@ -55,5 +63,42 @@ export function ConfirmationStep({ receipt, focusOnMount }: ConfirmationStepProp
         </ButtonLink>
       </p>
     </StepFrame>
+  );
+}
+
+type CopyStatus = "idle" | "copied" | "failed";
+
+/**
+ * Copie le lien dans le presse-papiers. `navigator.clipboard` n'existe que sur une page
+ * sécurisée (https, localhost) et peut être refusé : on propose alors de copier à la main.
+ * Le message de résultat est dans une zone `role="status"` présente DÈS le départ (vide) :
+ * les lecteurs d'écran n'annoncent de façon fiable que les changements d'une zone déjà là.
+ */
+function CopyLinkButton({ url }: { url: string }) {
+  const [status, setStatus] = useState<CopyStatus>("idle");
+
+  async function handleCopy() {
+    try {
+      if (!navigator.clipboard) throw new Error("Presse-papiers indisponible");
+      await navigator.clipboard.writeText(url);
+      setStatus("copied");
+    } catch {
+      setStatus("failed");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <p>
+        <Button variant="secondary" onClick={handleCopy} className="w-full sm:w-auto">
+          {status === "copied" ? "Lien copié" : "Copier le lien"}
+        </Button>
+      </p>
+      <p role="status" className="font-semibold">
+        {status === "copied" && "Lien copié. Colle-le dans tes notes ou envoie-le-toi."}
+        {status === "failed" &&
+          "Copie impossible sur cet appareil : sélectionne le lien ci-dessus pour le copier, ou fais une capture d'écran."}
+      </p>
+    </div>
   );
 }
