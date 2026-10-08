@@ -55,9 +55,9 @@ menu par-dessus), adapté à nos couleurs : on n'en copie pas l'identité.
 | `#C2185B` / `#111111` | 3,22  | **non** : pas de rose foncé sur bloc noir      |
 | `#5C5C5C` / `#111111` | 2,82  | **non** : pas de gris secondaire sur bloc noir |
 
-À noter : le fond orange du bouton contraste à 2,87 avec le blanc et 2,23 avec le rose pâle.
-Le libellé (6,59) suffit à identifier le bouton, mais un contour reste une option à trancher
-au moment de coder les composants.
+**Point ouvert** : le fond orange du bouton contraste à 2,87 avec le blanc et 2,23 avec le rose
+pâle. Décision du 2026-10-08 : pas de contour pour l'instant, le libellé (6,59) identifie le
+bouton. À vérifier sur un vrai téléphone en plein jour lors des finitions.
 
 ## Typographies _(validé)_
 
