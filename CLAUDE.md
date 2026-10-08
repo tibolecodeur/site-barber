@@ -35,6 +35,10 @@ Décisions de design validées : @docs/DESIGN.md
   chaque mise en ligne.
 - `npx supabase migration new <nom>` — nouvelle migration SQL (dossier `supabase/migrations/`)
 - `npx supabase test db` — tests SQL (dossier `supabase/tests/`)
+- Tests et Supabase : aucun test ne touche la vraie base. Vitest force les variables Supabase
+  à vide (`vite.config.ts`) et simule le client (`src/test/fakeSupabase.ts`) ; les specs e2e
+  importent `test` / `expect` depuis `e2e/fixtures.ts` (jamais `@playwright/test`), qui
+  intercepte et coupe tout appel Supabase.
 
 ## Méthode projet (comme en entreprise)
 

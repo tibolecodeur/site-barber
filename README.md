@@ -52,7 +52,9 @@ npm ci        # installe exactement package-lock.json (dont la CLI Supabase)
 # Variables d'environnement : seule la clé « anon » (publique) va ici.
 cp .env.example .env.local
 # puis renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
-# (Supabase > Project Settings > API)
+# (Supabase > Project Settings > API). Sans elles, le site démarre quand même et affiche
+# « Impossible de charger les prestations pour le moment ». Les tests n'en ont pas besoin :
+# Vitest les force à vide, Playwright utilise des valeurs factices et simule Supabase.
 
 # Navigateurs pour les tests end-to-end (Chromium = Android et desktop, WebKit = iPhone)
 npx playwright install chromium webkit
@@ -78,14 +80,14 @@ npm run dev   # http://localhost:5173
 
 Base de données (CLI Supabase installée en devDependency, version figée) :
 
-| Commande                           | Rôle                                                     |
-| ---------------------------------- | -------------------------------------------------------- |
-| `npx supabase start`               | Lance Supabase en local (Docker), migrations + seed      |
-| `npx supabase db start`            | Postgres seul, plus rapide : suffit pour les tests pgTAP |
-| `npx supabase db reset`            | Recrée la base locale (migrations puis `seed.sql`)       |
-| `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée                        |
-| `npx supabase test db`             | Tests pgTAP (dont les accès interdits)                   |
-| `npx supabase stop`                | Arrête les conteneurs                                    |
+| Commande                           | Rôle                                                           |
+| ---------------------------------- | -------------------------------------------------------------- |
+| `npx supabase start`               | Lance Supabase en local (Docker), migrations + seed            |
+| `npx supabase db start`            | Postgres seul, plus rapide : suffit pour les tests pgTAP       |
+| `npx supabase db reset`            | Recrée la base locale (migrations, `seed.sql`, `seed-dev.sql`) |
+| `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée                              |
+| `npx supabase test db`             | Tests pgTAP (dont les accès interdits)                         |
+| `npx supabase stop`                | Arrête les conteneurs                                          |
 
 ## Base de données
 
@@ -119,7 +121,12 @@ conservation des données clients 6 mois.
 
 Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, admin,
 chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.
-`supabase/seed.sql` ne contient que des données de développement avec des **adresses factices**.
+`supabase/seed.sql` : les prestations de départ, relançable sans doublon, à lancer à la main dans
+le SQL Editor du projet distant. `supabase/seed-dev.sql` : lieux (**adresses factices**) et
+disponibilités de test, pour la base **locale uniquement**.
+
+> ⚠️ Ne jamais utiliser `supabase db push --include-seed` : `seed-dev.sql` partirait sur le
+> projet distant (il s'arrête de lui-même sur une base qui a déjà un admin ou des RDV).
 
 ## Routes
 
@@ -151,8 +158,9 @@ src/
 │   ├── admin/        connexion, disponibilités, rendez-vous (data.ts)
 │   └── gallery/      affichage public des créations
 ├── lib/
-│   ├── supabase.ts   client Supabase unique
-│   ├── fakeDb.ts     fausse base en mémoire (maquette, avant branchement Supabase)
+│   ├── supabase.ts   client Supabase public (getSupabase, sans session)
+│   ├── database.types.ts  types des tables, écrits à la main d'après les migrations
+│   ├── fakeDb.ts     fausse base en mémoire (créneaux, réservation, admin : pas encore branchés)
 │   ├── dates.ts      dates : stockées en ISO, affichées en heure de Paris
 │   └── schemas.ts    schémas Zod partagés
 └── test/setup.ts     configuration des tests
