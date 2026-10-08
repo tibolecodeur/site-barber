@@ -92,6 +92,18 @@ Décisions de design validées : @docs/DESIGN.md
   focus visible, labels, navigation clavier), images en `loading="lazy"`, et toute animation
   désactivée si `prefers-reduced-motion`.
 
+### Skills de design (design-taste-frontend, impeccable)
+
+- `docs/DESIGN.md` est la seule source de vérité du design et prime sur tout skill
+  (design-taste-frontend, impeccable). Ne jamais le modifier sans ma validation.
+- Les skills de design proposent, ils ne décident pas : aucun changement de palette, de police,
+  de ton ou de structure sans ma validation.
+- Aucune bibliothèque d'animation (GSAP, Framer Motion, etc.) sans ma validation explicite.
+- Impeccable sert uniquement à vérifier (`detect`, `audit`). Ne pas lancer ses commandes de
+  génération (`craft`, `live`, `init`, `document`…) qui créent `PRODUCT.md` ou `DESIGN.md` à la
+  racine ou des fichiers dans `.impeccable/`, sauf demande explicite de ma part.
+- Les hooks Impeccable sont désactivés ; ne pas les réactiver sans mon accord.
+
 ## Mobile, iOS et Android (~90 % des visiteurs, client ET admin)
 
 - Conception mobile d'abord, desktop en adaptation secondaire. Zones tactiles ≥ 44 px, actions
