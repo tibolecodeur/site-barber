@@ -30,9 +30,10 @@ menu par-dessus), adapté à nos couleurs : on n'en copie pas l'identité.
 | Fond principal       | `#FFFFFF` | sections blanches                                            |
 | Fond alterné         | `#FFD9E6` | sections rose pâle, en alternance avec le blanc              |
 | Blocs sombres        | `#111111` | quelques blocs noirs ponctuels                               |
-| Texte                | `#111111` | texte courant, titres, texte des boutons orange              |
+| Texte                | `#111111` | texte courant, titres, texte et contour des boutons          |
 | Texte secondaire     | `#5C5C5C` | légendes, durées, aides de champ (sur fond clair uniquement) |
-| Action principale    | `#FF6A1A` | fond des boutons principaux, toujours avec texte `#111111`   |
+| Action principale    | `#FFD9E6` | fond des boutons principaux, texte et contour `#111111`      |
+| Orange               | `#FF6A1A` | duotone du hero uniquement (plus utilisé pour les boutons)   |
 | Liens et accents     | `#C2185B` | liens, accents texte ; **en gras** sur le rose pâle          |
 | Texte sur bloc noir  | `#FFFFFF` | texte courant sur `#111111`                                  |
 | Accent sur bloc noir | `#FFD9E6` | liens (soulignés) et texte secondaire sur `#111111`          |
@@ -55,9 +56,10 @@ menu par-dessus), adapté à nos couleurs : on n'en copie pas l'identité.
 | `#C2185B` / `#111111` | 3,22  | **non** : pas de rose foncé sur bloc noir      |
 | `#5C5C5C` / `#111111` | 2,82  | **non** : pas de gris secondaire sur bloc noir |
 
-**Point ouvert** : le fond orange du bouton contraste à 2,87 avec le blanc et 2,23 avec le rose
-pâle. Décision du 2026-10-08 : pas de contour pour l'instant, le libellé (6,59) identifie le
-bouton. À vérifier sur un vrai téléphone en plein jour lors des finitions.
+**Bouton principal (2026-10-08)** : fond rose pâle `#FFD9E6`, texte `#111111` (14,67), contour
+`#111111` de 2 px. Sans contour, le bouton disparaîtrait sur les sections rose pâle (même
+couleur) et se verrait à peine sur le blanc ; le contour noir contraste à 14,67 sur rose pâle et
+18,88 sur blanc. Le point ouvert sur le contraste du fond orange est donc clos.
 
 ## Typographies _(validé)_
 
@@ -78,7 +80,7 @@ bouton. À vérifier sur un vrai téléphone en plein jour lors des finitions.
   texte blanc (au moins 4,5) quel que soit l'image de la vidéo.
 - Sections suivantes en alternance blanc / rose pâle `#FFD9E6`, avec quelques blocs noirs
   `#111111`.
-- **Mobile** : un seul bouton « Réserver » orange collé en bas de l'écran (zones sûres
+- **Mobile** : un seul bouton « Réserver » rose pâle collé en bas de l'écran (zones sûres
   `env(safe-area-inset-bottom)`).
 - **Galerie** : photos en noir et blanc dans la grille, en couleur dans la vue détail.
 - **Vidéo du hero** : boucle de 6 s maximum, environ 1,5 Mo, `autoplay muted loop playsinline`,
@@ -88,7 +90,8 @@ bouton. À vérifier sur un vrai téléphone en plein jour lors des finitions.
 ## Composants (boutons, cartes, champs…)
 
 - **Boutons** : forme pilule (entièrement arrondis), hauteur 52 px minimum. Principal : fond
-  `#FF6A1A`, texte `#111111`. _(validé)_
+  `#FFD9E6`, texte `#111111`, contour `#111111` de 2 px. _(validé le 2026-10-08, remplace
+  l'orange)_
 - **Champs** : _à préciser au moment de coder les composants._
 
 ## Animations et effets
@@ -104,3 +107,4 @@ _Aucune librairie d'animation installée pour l'instant._
 | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 2026-10-07 | Nom CutsByAlix. Intentions (non appliquées) : logo 3 lignes, ton professionnel, rose / orange + gris / blanc, accueil long avec grande photo, loader ciseaux ou tondeuse.               |
 | 2026-10-08 | Direction B + C : fond blanc, sections rose pâle et blocs noirs, Archivo auto-hébergée, boutons pilule orange, hero vidéo duotone, galerie N&B → couleur. Logo texte provisoire (TODO). |
+| 2026-10-08 | Boutons principaux en rose pâle `#FFD9E6`, texte et contour noirs (au lieu de l'orange). L'orange ne sert plus qu'au duotone du hero.                                                   |

@@ -17,10 +17,10 @@
 @theme {
   --color-*: initial;
   --color-surface: #ffffff; /* fond principal */
-  --color-blush: #ffd9e6; /* fond alterné rose pâle ; accent sur bloc noir */
-  --color-ink: #111111; /* texte, blocs sombres, texte des boutons orange */
+  --color-blush: #ffd9e6; /* fond alterné, fond des boutons principaux, accent sur bloc noir */
+  --color-ink: #111111; /* texte, blocs sombres, texte et contour des boutons */
   --color-muted: #5c5c5c; /* texte secondaire, sur fond clair UNIQUEMENT */
-  --color-action: #ff6a1a; /* fond des boutons principaux, JAMAIS en texte sur fond clair */
+  --color-orange: #ff6a1a; /* duotone du hero uniquement ; JAMAIS en texte sur fond clair */
   --color-accent: #c2185b; /* liens et accents sur fond clair, JAMAIS sur bloc noir */
   --color-white: #ffffff; /* texte sur bloc noir */
 

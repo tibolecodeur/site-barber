@@ -9,18 +9,24 @@ describe("Button", () => {
     expect(screen.getByRole("button", { name: "Envoyer" })).toHaveAttribute("type", "button");
   });
 
-  it("accepte type « submit » et la variante principale orange à texte noir", () => {
+  it("accepte type « submit » et la variante principale rose pâle à texte et contour noirs", () => {
     render(<Button type="submit">Confirmer</Button>);
     const bouton = screen.getByRole("button", { name: "Confirmer" });
     expect(bouton).toHaveAttribute("type", "submit");
-    expect(bouton).toHaveClass("bg-action", "text-ink", "rounded-pill", "min-h-button");
+    expect(bouton).toHaveClass(
+      "bg-blush",
+      "text-ink",
+      "border-ink",
+      "rounded-pill",
+      "min-h-button",
+    );
   });
 
-  it("variante secondaire : contour, sans fond orange", () => {
+  it("variante secondaire : contour, sans fond rose", () => {
     render(<Button variant="secondary">Annuler</Button>);
     const bouton = screen.getByRole("button", { name: "Annuler" });
     expect(bouton).toHaveClass("border-2");
-    expect(bouton).not.toHaveClass("bg-action");
+    expect(bouton).not.toHaveClass("bg-blush");
   });
 });
 
@@ -35,6 +41,6 @@ describe("ButtonLink", () => {
     );
     const lien = screen.getByRole("link", { name: "Réserver" });
     expect(lien).toHaveAttribute("href", "/reserver");
-    expect(lien).toHaveClass("bg-action", "w-full");
+    expect(lien).toHaveClass("bg-blush", "w-full");
   });
 });

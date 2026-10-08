@@ -61,7 +61,7 @@ export function HeroVideo({ videoSrc, posterSrc }: HeroVideoProps) {
         )}
       </div>
       {/* Duotone FIXE (jamais animé) : le noir reste noir, le blanc devient rose → orange. */}
-      <div className="absolute inset-0 bg-linear-to-br from-accent to-action mix-blend-multiply" />
+      <div className="absolute inset-0 bg-linear-to-br from-accent to-orange mix-blend-multiply" />
       <div className="absolute inset-0 bg-ink/60" />
     </div>
   );
