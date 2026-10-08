@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 
 /** Chaque route, son titre h1 et le titre d'onglet attendu. */
 const PAGES = [
@@ -70,14 +70,26 @@ test("l'accueil affiche les deux prestations sans prix inventé", async ({ page 
   await expect(prestations.getByText("Prix : À confirmer")).toHaveCount(2);
 });
 
+/** Sur mobile, les liens sont dans un menu replié : on l'ouvre s'il y a un bouton « Menu ». */
+async function ouvrirMenuSiReplie(page: Page) {
+  const bouton = page.getByRole("button", { name: "Menu" });
+  if (await bouton.isVisible()) {
+    await bouton.click();
+    await expect(bouton).toHaveAttribute("aria-expanded", "true");
+  }
+}
+
 test("les ancres du menu fonctionnent depuis une autre page", async ({ page }) => {
   await page.goto("/reserver");
+  const menu = page.getByRole("navigation", { name: "Navigation principale" });
 
-  await page.getByRole("link", { name: "Galerie" }).click();
+  await ouvrirMenuSiReplie(page);
+  await menu.getByRole("link", { name: "Galerie" }).click();
   await expect(page).toHaveURL("/#galerie");
   await expect(page.getByRole("heading", { level: 2, name: "Galerie" })).toBeInViewport();
 
-  await page.getByRole("link", { name: "Réserver", exact: true }).first().click();
+  await ouvrirMenuSiReplie(page);
+  await menu.getByRole("link", { name: "Réserver", exact: true }).click();
   await expect(page).toHaveURL("/reserver");
   await expect(page.getByRole("heading", { level: 1, name: "Réserver" })).toBeInViewport();
 });

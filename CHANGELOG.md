@@ -50,6 +50,15 @@ Ce projet suit le [versionnage sémantique](https://semver.org/lang/fr/).
   - tests e2e (titres, ordre des sections, ancres, labels, débordement à 375 px) et audit
     d'accessibilité automatique avec `@axe-core/playwright` sur chaque route.
 - Intentions de design (non appliquées) consignées dans `docs/DESIGN.md`.
+- Fondations visuelles (direction B + C de `docs/DESIGN.md`) :
+  - tokens Tailwind v4 (`@theme`) : palette réduite aux 7 couleurs validées, Archivo
+    auto-hébergée (`@fontsource-variable/archivo`, 2 fichiers : droit et italique condensé),
+    boutons pilule, espacements, focus visible adapté au fond ;
+  - composants `Button` / `ButtonLink`, `Field`, `Section` (blanc, rose pâle, noir), `Card`,
+    `HeroVideo` (duotone fixe, voile, poster seul si animations réduites ou lecture refusée) ;
+  - hero plein écran, en-tête qui passe du blanc au noir au défilement, menu mobile replié,
+    bouton « Réserver » collé en bas sur mobile, pied de page noir ; toutes les pages habillées ;
+  - tests Vitest des composants et hooks, test Playwright mobile du hero.
 
 ### Modifié
 

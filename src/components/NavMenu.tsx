@@ -11,15 +11,19 @@ const ANCHOR_LINKS = [
   { to: "/#reserver", label: "Comment réserver" },
 ] as const;
 
-/** Classes communes : zone tactile d'au moins 44 px de haut (min-h-11). */
-const LINK_CLASS = "inline-flex min-h-11 items-center";
+/**
+ * Zone tactile d'au moins 44 px (min-h-tap). La couleur est héritée de l'en-tête (blanc sur
+ * le hero, noir sur fond clair) ; le lien de la page courante est souligné.
+ */
+const LINK_CLASS =
+  "inline-flex min-h-tap items-center text-lg font-semibold md:text-base aria-[current=page]:underline aria-[current=page]:underline-offset-4";
 
 export function NavMenu() {
   return (
     // `aria-label` distingue ce <nav> de celui du pied de page.
     <nav aria-label="Navigation principale">
-      {/* Liste simple qui passe à la ligne sur petit écran, sans menu burger. */}
-      <ul className="flex flex-wrap gap-x-4">
+      {/* Mobile : liste verticale dans le panneau du menu ; desktop : sur une ligne. */}
+      <ul className="flex flex-col pb-4 md:flex-row md:gap-x-6 md:pb-0">
         {ANCHOR_LINKS.map((link) => (
           <li key={link.to}>
             <Link to={link.to} className={LINK_CLASS}>

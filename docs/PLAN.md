@@ -29,7 +29,9 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 ## Phase 3 — Identité visuelle
 
 - [x] `/direction-artistique` : 3 propositions, choix B + C, docs/DESIGN.md + ADR 0003
-- [ ] Couleurs, typographies, composants de base
+- [x] Couleurs, typographies, composants de base
+      _(tokens, Archivo, Button, Field, Section, Card, hero ; restent : style des champs à
+      valider, vidéo et poster du hero, logo HD)_
 
 ## Phase 4 — Vitrine
 

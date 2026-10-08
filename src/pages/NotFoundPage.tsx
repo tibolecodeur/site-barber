@@ -1,16 +1,21 @@
-import { Link } from "react-router";
+import { ButtonLink } from "@/components/Button";
 import { PageMeta } from "@/components/PageMeta";
+import { Section } from "@/components/Section";
 
 export function NotFoundPage() {
   return (
     <>
       <PageMeta title="Page introuvable" description="Cette page n'existe pas." />
-      <h1>Page introuvable</h1>
-      <p className="py-4">
-        <Link to="/" className="inline-flex min-h-11 items-center">
-          Retour à l'accueil
-        </Link>
-      </p>
+      <Section variant="blush">
+        <h1>Page introuvable</h1>
+      </Section>
+      <Section>
+        <p>
+          <ButtonLink to="/" variant="secondary">
+            Retour à l'accueil
+          </ButtonLink>
+        </p>
+      </Section>
     </>
   );
 }
