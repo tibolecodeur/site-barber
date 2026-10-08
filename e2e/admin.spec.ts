@@ -1,5 +1,5 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 /**
  * Espace admin sur mobile, avec le faux état connecté (serveur de développement seulement ;

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 /** Chaque route, son titre h1 et le titre d'onglet attendu. */
 const PAGES = [

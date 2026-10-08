@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 /**
  * Hero de l'accueil, sur mobile (projets mobile-android et mobile-iphone).

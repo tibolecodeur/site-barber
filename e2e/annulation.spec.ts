@@ -1,5 +1,6 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test, type Page } from "@playwright/test";
+import type { Page } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 /**
  * Les 4 états de /annuler, sur mobile, avec les liens de démonstration de la fausse base
