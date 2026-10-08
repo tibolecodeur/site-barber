@@ -5,6 +5,7 @@ import {
   writeDevSession,
 } from "@/features/admin/devSession";
 import { fakeDb, fakeLatency, overlapsRange } from "@/lib/fakeDb";
+import { randomUuid } from "@/lib/uuid";
 
 /**
  * Couche données de l'espace admin : les écrans n'importent QUE ces fonctions.
@@ -202,7 +203,7 @@ export async function createAvailability(input: NewAvailability): Promise<Availa
   }
 
   const row = {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     location_id: location.id,
     starts_at: new Date(start).toISOString(),
     ends_at: new Date(end).toISOString(),

@@ -1,6 +1,7 @@
 import { BOOKING_RULES, HOUR_MS } from "@/lib/bookingRules";
 import { addDaysToKey, formatTime, parisDateTime, parisDayKey, type DayKey } from "@/lib/dates";
 import { fakeDb, fakeLatency, overlapsRange, type BookingRow } from "@/lib/fakeDb";
+import { randomUuid } from "@/lib/uuid";
 import {
   isValidEmail,
   isValidName,
@@ -232,7 +233,7 @@ export async function createBooking(input: NewBooking): Promise<BookingReceipt> 
 
   const location = db.locations.find((l) => l.id === slot.locationId)!;
   const booking: BookingRow = {
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     service_id: service.id,
     location_id: location.id,
     starts_at: slot.startsAt,
@@ -242,7 +243,7 @@ export async function createBooking(input: NewBooking): Promise<BookingReceipt> 
     phone,
     email,
     status: "confirmed",
-    cancel_token: crypto.randomUUID(),
+    cancel_token: randomUuid(),
     created_at: now.toISOString(),
   };
   db.bookings.push(booking);

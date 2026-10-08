@@ -275,3 +275,34 @@ test("confirmation : si la copie est refusée, la page propose de copier à la m
   await expect(page.getByRole("status").filter({ hasText: /Copie impossible/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Copier le lien" })).toBeVisible();
 });
+
+/**
+ * Bug corrigé : sur téléphone, en http://192.168.x.x:5173 (contexte NON sécurisé), les API
+ * réservées à https / localhost n'existent pas. On les retire avant le chargement de la page
+ * pour reproduire ce contexte dans Chromium (Android) et WebKit (iPhone).
+ */
+test("contexte non sécurisé (http) : prestations, réservation et repli de la copie", async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    delete (Crypto.prototype as { randomUUID?: unknown }).randomUUID;
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: undefined });
+  });
+  const erreurs: string[] = [];
+  page.on("pageerror", (e) => erreurs.push(e.message));
+
+  await page.goto("/reserver");
+  expect(await page.evaluate(() => typeof crypto.randomUUID)).toBe("undefined");
+  await expect(page.getByRole("radio", { name: /^Coupe\s*60 min/ })).toBeVisible();
+  await expect(page.getByRole("radio", { name: /^Coupe \+ barbe/ })).toBeVisible();
+  await expect(page.getByRole("alert")).toHaveCount(0);
+
+  // Toute la réservation fonctionne, lien d'annulation compris (uuid généré par le repli).
+  await reserverJusquALaConfirmation(page);
+  await expect(page.locator("#cancel-link-url")).toHaveText(
+    /\/annuler\?token=[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+  );
+  await page.getByRole("button", { name: "Copier le lien" }).click();
+  await expect(page.getByRole("status").filter({ hasText: /Copie impossible/ })).toBeVisible();
+  expect(erreurs).toEqual([]);
+});

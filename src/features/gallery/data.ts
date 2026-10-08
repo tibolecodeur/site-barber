@@ -1,4 +1,5 @@
 import { fakeDb, fakeLatency, type GalleryItemRow } from "@/lib/fakeDb";
+import { randomUuid } from "@/lib/uuid";
 
 /**
  * Couche données de la galerie : les écrans n'importent QUE ces fonctions.
@@ -76,7 +77,7 @@ export async function addGalleryItem(input: NewGalleryItem): Promise<GalleryItem
   if (caption.length > GALLERY_LIMITS.maxCaptionLength) throw new GalleryError("caption_too_long");
 
   const db = fakeDb();
-  const id = crypto.randomUUID();
+  const id = randomUuid();
   const row: GalleryItemRow = {
     id,
     image_path: `${id}.${input.file.type.split("/")[1]}`,

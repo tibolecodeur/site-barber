@@ -1,5 +1,6 @@
 import { HOUR_MS } from "@/lib/bookingRules";
 import { addDaysToKey, isoWeekday, parisDateTime, parisDayKey, type DayKey } from "@/lib/dates";
+import { randomUuid } from "@/lib/uuid";
 
 /**
  * Fausse base de données EN MÉMOIRE, pour construire les écrans sans Supabase.
@@ -133,7 +134,7 @@ function seed(now: Date): FakeDb {
         : (WEEKLY_AVAILABILITIES[isoWeekday(day)] ?? []);
     for (const range of ranges) {
       availabilities.push({
-        id: crypto.randomUUID(),
+        id: randomUuid(),
         location_id: range.locationId,
         starts_at: at(day, range.from),
         ends_at: at(day, range.to),
@@ -145,12 +146,12 @@ function seed(now: Date): FakeDb {
     fields: Pick<BookingRow, "starts_at" | "first_name" | "last_name" | "phone" | "email"> &
       Partial<BookingRow>,
   ): BookingRow => ({
-    id: crypto.randomUUID(),
+    id: randomUuid(),
     service_id: SERVICE_IDS.cut,
     location_id: LOCATION_IDS.home,
     ends_at: plusHour(fields.starts_at),
     status: "confirmed",
-    cancel_token: crypto.randomUUID(),
+    cancel_token: randomUuid(),
     created_at: createdAt,
     ...fields,
   });
@@ -255,7 +256,7 @@ function seed(now: Date): FakeDb {
     availabilities,
     bookings,
     gallery_items: [1, 2, 3].map((n) => ({
-      id: crypto.randomUUID(),
+      id: randomUuid(),
       image_path: `demo/creation-${n}.jpg`,
       caption: `Création de démonstration n° ${n}`,
       sort_order: n,
