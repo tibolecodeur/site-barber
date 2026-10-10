@@ -59,7 +59,7 @@ describe("authentification (faux état connecté, développement)", () => {
 describe("getLocations", () => {
   it("donne à l'admin les lieux avec leur adresse privée", async () => {
     const locations = await getLocations();
-    expect(locations.map((l) => l.publicLabel)).toEqual(["Chez ses parents", "Chez lui"]);
+    expect(locations.map((l) => l.publicLabel)).toEqual(["Angers", "Saint-Christophe-du-Bois"]);
     expect(locations[0]!.privateAddress).toMatch(/fictive/);
   });
 });
@@ -77,7 +77,7 @@ describe("getAdminBookings", () => {
     ]);
     expect(today[0]).toMatchObject({
       serviceName: "Coupe",
-      locationLabel: "Chez lui",
+      locationLabel: "Saint-Christophe-du-Bois",
       phone: "0639980001",
       status: "confirmed",
     });
@@ -94,21 +94,21 @@ describe("getAdminBookings", () => {
 describe("disponibilités", () => {
   it("liste les plages à venir et en ajoute une", async () => {
     const before = await getAvailabilities();
-    expect(before[0]).toMatchObject({ locationLabel: "Chez lui" });
+    expect(before[0]).toMatchObject({ locationLabel: "Saint-Christophe-du-Bois" });
 
-    const [parents] = await getLocations();
+    const [firstLocation] = await getLocations();
     const created = await createAvailability({
-      locationId: parents!.id,
+      locationId: firstLocation!.id,
       startsAt: "2026-10-19T08:00:00Z", // lundi, aucune dispo
       endsAt: "2026-10-19T12:00:00Z",
     });
-    expect(created).toMatchObject({ locationLabel: "Chez ses parents" });
+    expect(created).toMatchObject({ locationLabel: "Angers" });
     expect(await getAvailabilities()).toHaveLength(before.length + 1);
   });
 
   it("refuse une fin avant le début, plus de 24 h, un lieu inconnu ou un chevauchement", async () => {
-    const [parents] = await getLocations();
-    const base = { locationId: parents!.id };
+    const [firstLocation] = await getLocations();
+    const base = { locationId: firstLocation!.id };
     await expectAdminError(
       createAvailability({
         ...base,
@@ -133,7 +133,7 @@ describe("disponibilités", () => {
       }),
       "not_found",
     );
-    // Aujourd'hui 9 h–21 h « Chez lui » : chevauchement, même dans l'autre lieu.
+    // Aujourd'hui 9 h–21 h « Saint-Christophe-du-Bois » : chevauchement, même dans l'autre lieu.
     await expectAdminError(
       createAvailability({
         ...base,

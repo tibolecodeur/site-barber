@@ -9,7 +9,7 @@ test.skip(({ isMobile }) => !isMobile, "Parcours testé sur les projets mobiles"
 
 /**
  * Jour de semaine voulu (0 = dimanche… 2 = mardi) dans 2 à 3 semaines, au format ISO local.
- * Démo : le mardi est ouvert de 14 h à 18 h « Chez lui », le lundi n'a aucune dispo.
+ * Démo : le mardi est ouvert de 14 h à 18 h « Saint-Christophe-du-Bois », le lundi n'a aucune dispo.
  */
 function jourDansDeuxSemaines(jourSemaine: number): string {
   const date = new Date();
@@ -39,7 +39,7 @@ test("connexion, ajout d'une disponibilité, déconnexion", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 1, name: "Disponibilités" })).toBeVisible();
 
   // Chevauchement refusé : ce mardi est déjà ouvert de 14 h à 18 h (14 h–18 h par défaut).
-  await page.getByRole("radio", { name: /^Chez lui/ }).check();
+  await page.getByRole("radio", { name: /^Saint-Christophe-du-Bois/ }).check();
   await page.getByLabel("Jour").fill(jourDansDeuxSemaines(2));
   await page.getByRole("button", { name: "Ajouter la disponibilité" }).click();
   await expect(page.getByText(/chevauche une autre disponibilité/)).toBeVisible();

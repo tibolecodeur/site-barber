@@ -30,7 +30,9 @@ test("/reserver affiche les prestations lues dans Supabase, avec leur prix", asy
   // Lecture minimale : prestations actives, colonnes utiles seulement, triées.
   const url = new URL((await requete).url());
   expect(url.searchParams.get("select")).toBe("id,name,duration_min,price_label");
-  expect(url.searchParams.get("active")).toBe("eq.true");
+  // Pas de filtre sur `active` : anon n'a pas le droit de lire cette colonne (la base
+  // répondrait « permission denied »), et la RLS ne lui montre déjà que les actives.
+  expect(url.searchParams.has("active")).toBe(false);
   expect(url.searchParams.get("order")).toBe("sort_order.asc,name.asc");
 });
 

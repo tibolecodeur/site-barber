@@ -82,11 +82,11 @@ select is(
   0::bigint,
   'get_booking ne renvoie ni téléphone, ni email, ni nom, ni identifiant');
 
--- Moins de 2 h avant : refus.
+-- Moins de 24 h avant : refus.
 select throws_ok(
   $$select public.cancel_booking('40000000-0000-4000-8000-000000000002')$$,
   'P0001', 'too_late',
-  'annulation à moins de 2 h refusée');
+  'annulation à moins de 24 h refusée');
 select is(
   (select can_cancel from public.get_booking('40000000-0000-4000-8000-000000000002')),
   false,
@@ -104,7 +104,7 @@ select is(
 
 -- Annulation nominale.
 select is(public.cancel_booking('40000000-0000-4000-8000-000000000001'), true,
-  'annulation avec le bon token, plus de 2 h avant : true');
+  'annulation avec le bon token, plus de 24 h avant : true');
 select is(public.cancel_booking('40000000-0000-4000-8000-000000000001'), false,
   'deuxième annulation : false (déjà annulé)');
 select results_eq(
@@ -116,7 +116,7 @@ reset role;
 select is(
   (select status from public.bookings where cancel_token = '40000000-0000-4000-8000-000000000002'),
   'confirmed',
-  'le RDV à moins de 2 h est toujours confirmé');
+  'le RDV à moins de 24 h est toujours confirmé');
 
 select * from finish();
 rollback;

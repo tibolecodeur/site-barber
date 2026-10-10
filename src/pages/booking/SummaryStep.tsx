@@ -16,7 +16,7 @@ import { StepActions, StepFrame } from "@/pages/booking/StepFrame";
 /** Erreurs qui obligent à choisir un autre créneau : on renvoie à l'étape 3. */
 const SLOT_ERRORS: Partial<Record<BookingErrorCode, string>> = {
   slot_unavailable: "Ce créneau vient d'être réservé par quelqu'un d'autre. Choisis-en un autre.",
-  too_soon: `Ce créneau commence dans moins de ${BOOKING_RULES.minNoticeHours} h. Choisis-en un autre.`,
+  too_soon: `Les réservations se font au plus tard ${BOOKING_RULES.minNoticeHours} h avant. Choisis un autre créneau.`,
   too_far: "Ce créneau est trop loin dans le temps. Choisis-en un autre.",
 };
 

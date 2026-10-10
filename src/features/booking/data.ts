@@ -120,15 +120,15 @@ const REQUEST_TIMEOUT_MS = 10_000;
 
 /**
  * Prestations actives, dans l'ordre d'affichage : lecture de la vraie table `services`.
- * La RLS (policy `services_public_read`) ne montre déjà que les actives à l'anonyme ; le
- * filtre `active` est gardé pour le jour où un admin connecté (qui voit tout) appellera ceci.
- * Colonnes utiles seulement. Rejette en cas d'erreur réseau, de base ou de config manquante.
+ * Pas de filtre `active` ici : la RLS (policy `services_public_read`) ne montre que les
+ * prestations actives à l'anonyme, qui n'a d'ailleurs le droit de lire QUE les colonnes
+ * id, name, duration_min, price_label et sort_order (migration regles_reservation…).
+ * Rejette en cas d'erreur réseau, de base ou de config manquante.
  */
 export async function getServices(): Promise<Service[]> {
   const { data, error } = await getSupabase()
     .from("services")
     .select("id, name, duration_min, price_label")
-    .eq("active", true)
     .order("sort_order")
     .order("name")
     .abortSignal(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
@@ -155,9 +155,9 @@ function maxBookingTime(now: Date): number {
 }
 
 /**
- * Copie de `private.compute_slots` : grille au pas de 60 min depuis le DÉBUT de chaque
+ * Copie de `private.compute_slots` : grille au pas de 70 min depuis le DÉBUT de chaque
  * dispo, créneaux entiers dans la dispo, moins les RDV confirmés (tous lieux), moins ce qui
- * est à moins de 2 h ou au-delà de 4 semaines.
+ * est à moins de 48 h ou au-delà de 4 semaines.
  */
 function computeSlots(serviceId: string, day: DayKey, now: Date) {
   const db = fakeDb();
@@ -311,7 +311,7 @@ export async function getBooking(token: string): Promise<BookingDetails | null> 
 
 /**
  * RPC `cancel_booking(p_token)` : true si annulé ; false si lien inconnu ou RDV déjà annulé ;
- * erreur `too_late` à moins de 2 h du RDV.
+ * erreur `too_late` à moins de 24 h du RDV.
  */
 export async function cancelBooking(token: string): Promise<boolean> {
   if (!isUuid(token)) return false;

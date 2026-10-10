@@ -15,7 +15,7 @@ begin
   end loop;
 end $$;
 
-select plan(15);
+select plan(18);
 
 -- Les six tables existent.
 select has_table('public', 'services', 'table services');
@@ -67,21 +67,41 @@ select set_eq(
   'anon n''exécute que les 4 RPC publiques'
 );
 
--- anon ne lit que services et gallery_items...
+-- anon lit gallery_items en entier...
 select set_eq(
   $$select table_name::text from information_schema.role_table_grants
      where table_schema = 'public' and grantee = 'anon' and privilege_type = 'SELECT'$$,
-  array['services', 'gallery_items'],
-  'anon ne lit que services et gallery_items'
+  array['gallery_items'],
+  'anon lit gallery_items en entier, aucune autre table'
 );
 
--- ... et n'écrit nulle part.
+-- ... et services colonne par colonne : seulement ce que le site affiche.
+select set_eq(
+  $$select table_name::text || '.' || column_name::text from information_schema.column_privileges
+     where table_schema = 'public' and grantee = 'anon' and privilege_type = 'SELECT'
+       and table_name <> 'gallery_items'$$,
+  array['services.id', 'services.name', 'services.duration_min', 'services.price_label',
+        'services.sort_order'],
+  'anon ne lit sur services que id, name, duration_min, price_label et sort_order'
+);
+
+-- ... et n'écrit nulle part (ni table entière, ni colonne).
 select is(
   (select count(*) from information_schema.role_table_grants
     where table_schema = 'public' and grantee = 'anon' and privilege_type <> 'SELECT'),
   0::bigint,
   'anon n''a aucun droit d''écriture sur les tables'
 );
+select is(
+  (select count(*) from information_schema.column_privileges
+    where table_schema = 'public' and grantee = 'anon' and privilege_type <> 'SELECT'),
+  0::bigint,
+  'anon n''a aucun droit d''écriture sur une colonne'
+);
+
+-- Un lieu actif doit avoir une vraie adresse (comportement testé dans 08_regles_test.sql).
+select col_has_check('public', 'locations', array['active', 'private_address'],
+  'contrainte : pas d''adresse provisoire sur un lieu actif');
 
 -- La table admins n'est écrite par personne via l'API.
 select is(
