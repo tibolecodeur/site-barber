@@ -1,6 +1,7 @@
 -- Calcul des créneaux libres.
 -- La plupart des cas passent par private.compute_slots avec une date « maintenant » FIXE
--- (mardi 20 octobre 2026, 8 h 30 à Paris) : le test ne se périme pas avec le temps.
+-- (dimanche 18 octobre 2026, 8 h 30 à Paris) : le test ne se périme pas avec le temps.
+-- Règles (private.settings) : grille au pas de 70 min, au moins 48 h à l'avance, 4 semaines max.
 -- Les deux derniers vérifient get_available_slots (la vraie RPC, avec now()) en anonyme.
 begin;
 create extension if not exists pgtap with schema extensions;
@@ -17,7 +18,7 @@ begin
   end loop;
 end $$;
 
-select plan(13);
+select plan(14);
 
 truncate public.bookings, public.availabilities, public.locations, public.services,
          public.gallery_items, public.admins;
@@ -32,23 +33,24 @@ insert into public.locations (id, public_label, private_address, active) values
   ('20000000-0000-4000-8000-000000000003', 'Lieu fermé', 'Adresse trois', false);
 
 insert into public.availabilities (location_id, starts_at, ends_at) values
-  -- Mar. 20/10 8 h – 12 h : 8 h passé, 9 h et 10 h à moins de 2 h → seul 11 h reste.
+  -- Mar. 20/10 8 h – 12 h, grille 8:00, 9:10, 10:20 : 8 h est à moins de 48 h (limite 20/10
+  -- 8 h 30) → 9:10 et 10:20 restent. (11:30 finirait à 12:30, hors dispo.)
   ('20000000-0000-4000-8000-000000000001', '2026-10-20 08:00 Europe/Paris', '2026-10-20 12:00 Europe/Paris'),
-  -- Mer. 21/10 14 h – 18 h, lieu deux : un RDV à 15 h.
+  -- Mer. 21/10 14 h – 18 h, lieu deux, grille 14:00, 15:10, 16:20 : un RDV à 15 h 10.
   ('20000000-0000-4000-8000-000000000002', '2026-10-21 14:00 Europe/Paris', '2026-10-21 18:00 Europe/Paris'),
-  -- Jeu. 22/10 10 h – 13 h : pour la prestation de 90 min.
+  -- Jeu. 22/10 10 h – 13 h : pour la prestation de 90 min (10:00, 11:10 ; 12:20 déborde).
   ('20000000-0000-4000-8000-000000000001', '2026-10-22 10:00 Europe/Paris', '2026-10-22 13:00 Europe/Paris'),
   -- Ven. 23/10 10 h – 12 h, lieu inactif.
   ('20000000-0000-4000-8000-000000000003', '2026-10-23 10:00 Europe/Paris', '2026-10-23 12:00 Europe/Paris'),
   -- Dim. 25/10, jour du passage à l'heure d'hiver (3 h → 2 h) : journée de 25 h.
   ('20000000-0000-4000-8000-000000000001', '2026-10-25 09:00 Europe/Paris', '2026-10-25 12:00 Europe/Paris'),
   ('20000000-0000-4000-8000-000000000001', '2026-10-25 23:00 Europe/Paris', '2026-10-26 00:00 Europe/Paris'),
-  -- Mar. 17/11 8 h – 10 h : limite des 4 semaines (17/11 8 h 30).
-  ('20000000-0000-4000-8000-000000000001', '2026-11-17 08:00 Europe/Paris', '2026-11-17 10:00 Europe/Paris');
+  -- Dim. 15/11 8 h – 11 h : limite des 4 semaines (15/11 8 h 30) → 8:00 oui, 9:10 non.
+  ('20000000-0000-4000-8000-000000000001', '2026-11-15 08:00 Europe/Paris', '2026-11-15 11:00 Europe/Paris');
 
 insert into public.bookings (service_id, location_id, starts_at, ends_at, first_name, last_name, phone)
 values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000002',
-        '2026-10-21 15:00 Europe/Paris', '2026-10-21 16:00 Europe/Paris', 'Léa', 'Martin', '0612345678');
+        '2026-10-21 15:10 Europe/Paris', '2026-10-21 16:10 Europe/Paris', 'Léa', 'Martin', '0612345678');
 
 -- Raccourci de lecture : heures locales des créneaux d'un jour, pour une prestation.
 -- (Fonction temporaire, appelée seulement en tant que postgres.)
@@ -56,21 +58,21 @@ create function pg_temp.slots(p_service uuid, p_day date) returns text[]
 language sql as $$
   select coalesce(array_agg(to_char(c.starts_at at time zone 'Europe/Paris', 'HH24:MI')
                             order by c.starts_at), '{}')
-    from private.compute_slots(p_service, p_day, '2026-10-20 08:30 Europe/Paris') c;
+    from private.compute_slots(p_service, p_day, '2026-10-18 08:30 Europe/Paris') c;
 $$;
 
 -- ---------------------------------------------------------------------------
 select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-10-20'),
-  array['11:00'],
-  'ni créneau passé, ni créneau à moins de 2 h');
+  array['09:10', '10:20'],
+  'ni créneau passé, ni créneau à moins de 48 h');
 
 select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-10-21'),
-  array['14:00', '16:00', '17:00'],
+  array['14:00', '16:20'],
   'un créneau déjà réservé n''est pas proposé');
 
 select is(pg_temp.slots('10000000-0000-4000-8000-000000000003', '2026-10-22'),
-  array['10:00', '11:00'],
-  'grille de 60 min depuis le début de la dispo, créneau entièrement dans la dispo (90 min)');
+  array['10:00', '11:10'],
+  'grille de 70 min depuis le début de la dispo, créneau entièrement dans la dispo (90 min)');
 
 select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-10-23'),
   '{}'::text[],
@@ -84,7 +86,7 @@ select is(pg_temp.slots('99999999-0000-4000-8000-000000000000', '2026-10-21'),
   '{}'::text[],
   'prestation inconnue : aucun créneau');
 
-select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-11-17'),
+select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-11-15'),
   array['08:00'],
   'rien au-delà de 4 semaines');
 
@@ -92,12 +94,12 @@ select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-11-17'),
 -- Changement d'heure (dimanche 25 octobre 2026).
 -- ---------------------------------------------------------------------------
 select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-10-25'),
-  array['09:00', '10:00', '11:00', '23:00'],
+  array['09:00', '10:10', '23:00'],
   'heure d''hiver : ni créneau doublé ni créneau perdu, 23 h compte bien pour le 25');
 
 select is(
   (select min(c.starts_at) from private.compute_slots(
-     '10000000-0000-4000-8000-000000000001', '2026-10-25', '2026-10-20 08:30 Europe/Paris') c),
+     '10000000-0000-4000-8000-000000000001', '2026-10-25', '2026-10-18 08:30 Europe/Paris') c),
   '2026-10-25 08:00:00+00'::timestamptz,
   'heure d''hiver : 9 h à Paris le 25/10 = 8 h UTC (UTC+1)');
 
@@ -116,8 +118,8 @@ values ('10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-0000000
 alter table public.bookings enable trigger bookings_before_write;
 
 select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-10-21'),
-  array['14:00', '16:00'],
-  'un créneau réservé dans un autre lieu n''est pas proposé');
+  array['14:00'],
+  'un créneau réservé dans un autre lieu n''est pas proposé (17 h bloque 16 h 20)');
 
 -- ---------------------------------------------------------------------------
 -- La vraie RPC, en anonyme, avec l'heure réelle.
@@ -129,32 +131,38 @@ delete from public.bookings;
 delete from public.availabilities;
 
 insert into public.availabilities (location_id, starts_at, ends_at) values
-  -- De 3 h avant maintenant à 5 h après : une partie passée, une partie trop proche.
+  -- De 44 h à 52 h après maintenant (heure pile) : le début est à moins de 48 h, la fin non.
   ('20000000-0000-4000-8000-000000000002',
-   date_trunc('hour', now()) - interval '3 hours', date_trunc('hour', now()) + interval '5 hours'),
-  -- Dans 10 jours, 10 h – 12 h.
+   date_trunc('hour', now()) + interval '44 hours', date_trunc('hour', now()) + interval '52 hours'),
+  -- Dans 10 jours, 10 h – 12 h 20 : 10:00 et 11:10.
   ('20000000-0000-4000-8000-000000000001',
    ((now() at time zone 'Europe/Paris')::date + 10 + time '10:00') at time zone 'Europe/Paris',
-   ((now() at time zone 'Europe/Paris')::date + 10 + time '12:00') at time zone 'Europe/Paris');
+   ((now() at time zone 'Europe/Paris')::date + 10 + time '12:20') at time zone 'Europe/Paris');
 
 set local role anon;
 
+-- Créneaux de la plage 44 h – 52 h, sur les jours qu'elle peut toucher (J à J+3).
 select is(
-  (select count(*) from (
-     select * from public.get_available_slots('10000000-0000-4000-8000-000000000001',
-                                              (now() at time zone 'Europe/Paris')::date)
-     union all
-     select * from public.get_available_slots('10000000-0000-4000-8000-000000000001',
-                                              (now() at time zone 'Europe/Paris')::date + 1)
-   ) s where s.starts_at < now() + interval '2 hours'),
+  (select count(*) from (select s.*
+     from generate_series(0, 3) as d
+    cross join lateral public.get_available_slots('10000000-0000-4000-8000-000000000001',
+                                                  (now() at time zone 'Europe/Paris')::date + d) s
+    where s.location_label = 'Lieu deux') near where near.starts_at < now() + interval '48 hours'),
   0::bigint,
-  'get_available_slots ne renvoie aucun créneau passé ni à moins de 2 h');
+  'get_available_slots ne renvoie aucun créneau à moins de 48 h');
+select ok(
+  (select count(*) from (select s.*
+     from generate_series(0, 3) as d
+    cross join lateral public.get_available_slots('10000000-0000-4000-8000-000000000001',
+                                                  (now() at time zone 'Europe/Paris')::date + d) s
+    where s.location_label = 'Lieu deux') near) > 0,
+  'get_available_slots renvoie bien les créneaux de la même plage situés après 48 h');
 
 select results_eq(
   $$select to_char(starts_at at time zone 'Europe/Paris', 'HH24:MI'), location_label
       from public.get_available_slots('10000000-0000-4000-8000-000000000001',
                                       (now() at time zone 'Europe/Paris')::date + 10)$$,
-  $$values ('10:00', 'Lieu un'), ('11:00', 'Lieu un')$$,
+  $$values ('10:00', 'Lieu un'), ('11:10', 'Lieu un')$$,
   'get_available_slots renvoie en un appel les créneaux et le libellé public du lieu');
 
 select * from finish();

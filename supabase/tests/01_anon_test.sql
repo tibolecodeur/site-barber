@@ -14,7 +14,7 @@ begin
   end loop;
 end $$;
 
-select plan(20);
+select plan(21);
 
 -- ---------------------------------------------------------------------------
 -- Données de test (en tant que postgres), isolées du seed.
@@ -29,17 +29,17 @@ insert into public.services (id, name, duration_min, active) values
 insert into public.locations (id, public_label, private_address) values
   ('20000000-0000-4000-8000-000000000001', 'Lieu un', '1 rue Secrète, 00000 Testville');
 
--- Dispo demain 10 h – 12 h (heure de Paris).
+-- Dispo à J+3, 10 h – 14 h (heure de Paris) : toujours au-delà du délai minimum de 48 h.
 insert into public.availabilities (location_id, starts_at, ends_at) values (
   '20000000-0000-4000-8000-000000000001',
-  ((now() at time zone 'Europe/Paris')::date + 1 + time '10:00') at time zone 'Europe/Paris',
-  ((now() at time zone 'Europe/Paris')::date + 1 + time '12:00') at time zone 'Europe/Paris'
+  ((now() at time zone 'Europe/Paris')::date + 3 + time '10:00') at time zone 'Europe/Paris',
+  ((now() at time zone 'Europe/Paris')::date + 3 + time '14:00') at time zone 'Europe/Paris'
 );
 insert into public.bookings (service_id, location_id, starts_at, ends_at, first_name, last_name, phone)
 values (
   '10000000-0000-4000-8000-000000000001', '20000000-0000-4000-8000-000000000001',
-  ((now() at time zone 'Europe/Paris')::date + 1 + time '10:00') at time zone 'Europe/Paris',
-  ((now() at time zone 'Europe/Paris')::date + 1 + time '11:00') at time zone 'Europe/Paris',
+  ((now() at time zone 'Europe/Paris')::date + 3 + time '10:00') at time zone 'Europe/Paris',
+  ((now() at time zone 'Europe/Paris')::date + 3 + time '11:00') at time zone 'Europe/Paris',
   'Léa', 'Martin', '0612345678'
 );
 
@@ -71,11 +71,11 @@ select throws_ok(
 -- get_available_slots : des créneaux, mais jamais l'adresse privée.
 select ok(
   (select count(*) from public.get_available_slots(
-     '10000000-0000-4000-8000-000000000001', (now() at time zone 'Europe/Paris')::date + 1)) > 0,
+     '10000000-0000-4000-8000-000000000001', (now() at time zone 'Europe/Paris')::date + 3)) > 0,
   'anon obtient les créneaux libres via get_available_slots');
 select is(
   (select count(*) from public.get_available_slots(
-     '10000000-0000-4000-8000-000000000001', (now() at time zone 'Europe/Paris')::date + 1) s
+     '10000000-0000-4000-8000-000000000001', (now() at time zone 'Europe/Paris')::date + 3) s
     where to_jsonb(s) ? 'private_address' or to_jsonb(s)::text like '%Secrète%'),
   0::bigint,
   'get_available_slots ne révèle jamais private_address');
@@ -122,10 +122,11 @@ select results_eq(
   'select image_path from public.gallery_items order by image_path',
   $$values ('visible.jpg'::text)$$,
   'anon ne voit que les photos publiées');
-select is(
-  (select count(*) from public.services where not active),
-  0::bigint,
-  'anon ne voit aucune prestation inactive');
+-- Colonnes internes de services : illisibles (droit par colonne), même pour filtrer.
+select throws_ok('select created_at from public.services', '42501', null,
+  'anon ne peut pas lire services.created_at');
+select throws_ok('select id from public.services where not active', '42501', null,
+  'anon ne peut pas lire ni filtrer sur services.active');
 
 select * from finish();
 rollback;
