@@ -66,6 +66,12 @@ pas de 60 min, réservation au moins 2 h à l'avance et au plus 4 semaines, annu
 migration (`create or replace function`). L'horizon de 4 semaines est calculé en heure de Paris,
 pour qu'il ne dépende ni du changement d'heure ni du fuseau de la session.
 
+> Mise à jour du 2026-10-10 (migration `…_regles_reservation_et_durcissement`) : pas de 70 min,
+> réservation au moins 48 h à l'avance, annulation jusqu'à 24 h avant (valeurs confirmées par
+> le barber). Délais exprimés en heures, pas en jours, pour rester absolus au changement
+> d'heure. Ajouts : contrainte « lieu actif = vraie adresse » et lecture de `services` par
+> colonne pour anon.
+
 ## Alternatives étudiées
 
 - **Lecture directe de `bookings` par l'anon avec une RLS filtrante**

@@ -115,10 +115,14 @@ Fonctions RPC publiques (`security definer`, validation complète en SQL) :
 Erreurs renvoyées au front (message de l'exception) : `invalid_input`, `slot_unavailable`,
 `too_soon`, `too_far`, `limit_reached`, `too_late`.
 
-Règles par défaut, **à confirmer avec le barber**, centralisées dans `private.settings()` (une
-migration suffit pour les changer) : créneaux de 60 min, réservation au moins 2 h et au plus
-4 semaines à l'avance, annulation jusqu'à 2 h avant, 2 RDV futurs max par téléphone ou email,
-conservation des données clients 6 mois.
+Règles centralisées dans `private.settings()` (une migration suffit pour les changer) : grille
+de créneaux de 70 min, réservation au plus tard 48 h avant et au plus 4 semaines à l'avance,
+annulation jusqu'à 24 h avant, 2 RDV futurs max par téléphone ou email, conservation des données
+clients 6 mois. Le front en garde une copie pour ses textes (`src/lib/bookingRules.ts`).
+
+Durcissements : un lieu actif ne peut pas garder une adresse provisoire (« À RENSEIGNER »,
+« adresse réelle ») ; le public (anon) ne lit sur `services` que `id`, `name`,
+`duration_min`, `price_label` et `sort_order`.
 
 Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, admin,
 chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.

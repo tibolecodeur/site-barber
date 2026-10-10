@@ -77,14 +77,15 @@ Détail et justification : `docs/adr/0002-modele-de-donnees-et-securite.md`.
 
 ## Règles de gestion
 
-Valeurs par défaut **à confirmer avec le barber**, centralisées dans `private.settings()` (une
-migration suffit pour les changer) :
+Valeurs confirmées par le barber le 2026-10-10 (sauf conservation des données), centralisées
+dans `private.settings()` (une migration suffit pour les changer) :
 
-- Créneaux proposés = disponibilités découpées toutes les **60 min** à partir du début de chaque
+- Créneaux proposés = disponibilités découpées toutes les **70 min** à partir du début de chaque
   dispo, selon la durée de la prestation, moins les RDV confirmés (tous lieux), moins les créneaux
-  passés ou à moins de **2 h**.
+  passés ou à moins de **48 h** (réservation au plus tard 48 h avant ; un créneau devient visible
+  des clients à J+2).
 - Pas de réservation au-delà de **4 semaines**.
-- Annulation client possible jusqu'à **2 h** avant le RDV.
+- Annulation client possible jusqu'à **24 h** avant le RDV.
 - Limite anti-abus : **2 RDV futurs** max par téléphone ou par email, + champ honeypot.
 - Conservation des données clients : suppression **6 mois** après le RDV (purge à coder avant la
   mise en ligne).
@@ -92,10 +93,10 @@ migration suffit pour les changer) :
 ## À confirmer avec le barber
 
 - [ ] Prix affichés des deux prestations (durées : 60 min chacune)
-- [ ] Durée standard d'un créneau (60 min par défaut)
+- [x] Durée standard d'un créneau → 70 min
 - [x] Où il coupe → deux lieux, « Chez ses parents » et « Chez lui », adresse révélée après réservation
 - [ ] Vraies adresses des deux lieux (à saisir en production, jamais dans le dépôt)
-- [ ] Délai d'annulation client (2 h par défaut), délai minimum (2 h), horizon (4 semaines)
+- [x] Délai d'annulation client → 24 h, délai minimum → 48 h, horizon → 4 semaines
 - [ ] Nom, logo, couleurs, ambiance, photos disponibles
 - [ ] Réseaux sociaux à mettre en avant
 
