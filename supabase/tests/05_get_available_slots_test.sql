@@ -122,6 +122,12 @@ select is(pg_temp.slots('10000000-0000-4000-8000-000000000001', '2026-10-21'),
 -- ---------------------------------------------------------------------------
 -- La vraie RPC, en anonyme, avec l'heure réelle.
 -- ---------------------------------------------------------------------------
+-- On repart de zéro : les dispos ci-dessous dépendent de now(). Si les dispos à dates fixes
+-- restaient en base, J+10 tomberait certains jours sur l'une d'elles (contrainte
+-- d'exclusion, test cassé selon la date du jour).
+delete from public.bookings;
+delete from public.availabilities;
+
 insert into public.availabilities (location_id, starts_at, ends_at) values
   -- De 3 h avant maintenant à 5 h après : une partie passée, une partie trop proche.
   ('20000000-0000-4000-8000-000000000002',
