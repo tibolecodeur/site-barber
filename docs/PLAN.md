@@ -43,6 +43,23 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 
 ## Phase 5 — Réservation client
 
+- [x] **Client Supabase et prestations réelles** (consigne 13) : `src/lib/supabase.ts` (sans
+      session, sans plantage si une variable manque), types écrits à la main
+      (`src/lib/database.types.ts`), `getServices` lit la table `services` (accueil et étape 1
+      de /reserver), états chargement / erreur / vide, `supabase/seed.sql` idempotent,
+      tests Vitest (client simulé) et Playwright (Supabase intercepté par `e2e/fixtures.ts`).
+- [ ] **À faire à la main** : lancer `supabase/seed.sql` dans le SQL Editor du projet distant,
+      puis vérifier /reserver avec `.env.local` renseigné. Noms et prix à confirmer avec Alix.
+      Avant la première dispo : saisir l'adresse de chaque lieu ET l'activer dans la même requête
+      (les lieux du seed sont créés inactifs).
+- [x] Revue sécurité : lieux du seed inactifs, `seed-dev.sql` retiré de `config.toml`
+      (`npm run db:reset:dev` en local) avec une garde renforcée.
+- [ ] Brancher le reste sur Supabase : créneaux (`get_available_slots`), réservation
+      (`create_booking`), consultation et annulation (`get_booking`, `cancel_booking`), puis
+      supprimer le pont provisoire `syncFakeServices` et `src/lib/fakeDb.ts`.
+- [ ] Poids du bundle : supabase-js ajoute ~56 kB gzip (107 → 163 kB, avertissement Vite
+      « chunk > 500 kB »). Piste à valider : charger le client par import dynamique.
+
 - [ ] Parcours complet · Confirmation + .ics + lien d'annulation · Page d'annulation
       _(maquette fonctionnelle faite sur fausse base (src/lib/fakeDb.ts) : parcours en 4 étapes
       (prestation, jour et créneau avec le lieu affiché, coordonnées, récap),

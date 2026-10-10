@@ -1,6 +1,13 @@
 import { BOOKING_RULES, HOUR_MS } from "@/lib/bookingRules";
 import { addDaysToKey, formatTime, parisDateTime, parisDayKey, type DayKey } from "@/lib/dates";
-import { fakeDb, fakeLatency, overlapsRange, type BookingRow } from "@/lib/fakeDb";
+import {
+  fakeDb,
+  fakeLatency,
+  overlapsRange,
+  syncFakeServices,
+  type BookingRow,
+} from "@/lib/fakeDb";
+import { getSupabase } from "@/lib/supabase";
 import { randomUuid } from "@/lib/uuid";
 import {
   isValidEmail,
@@ -15,8 +22,9 @@ import {
  * Chaque fonction a la forme de la table ou de la RPC Supabase correspondante
  * (supabase/migrations/…_fonctions_rpc.sql), avec des noms en camelCase.
  *
- * TODO: brancher Supabase. Implémentation factice (src/lib/fakeDb.ts) : remplacer chaque
- * corps par l'appel `supabase.from(…)` ou `supabase.rpc(…)`, puis convertir la ligne reçue.
+ * Branché sur Supabase : `getServices`.
+ * TODO: brancher Supabase. Le reste est encore factice (src/lib/fakeDb.ts) : remplacer chaque
+ * corps par l'appel `getSupabase().rpc(…)`, puis convertir la ligne reçue.
  */
 
 /** Table `services`. */
@@ -107,18 +115,34 @@ export function isUuid(value: string): boolean {
   return UUID_PATTERN.test(value);
 }
 
-/** Prestations actives, dans l'ordre d'affichage. */
+/** Au-delà, on abandonne la requête : en 4G instable, mieux vaut « Réessayer » qu'un chargement sans fin. */
+const REQUEST_TIMEOUT_MS = 10_000;
+
+/**
+ * Prestations actives, dans l'ordre d'affichage : lecture de la vraie table `services`.
+ * La RLS (policy `services_public_read`) ne montre déjà que les actives à l'anonyme ; le
+ * filtre `active` est gardé pour le jour où un admin connecté (qui voit tout) appellera ceci.
+ * Colonnes utiles seulement. Rejette en cas d'erreur réseau, de base ou de config manquante.
+ */
 export async function getServices(): Promise<Service[]> {
-  await fakeLatency();
-  return fakeDb()
-    .services.filter((s) => s.active)
-    .sort((a, b) => a.sort_order - b.sort_order)
-    .map((s) => ({
-      id: s.id,
-      name: s.name,
-      durationMin: s.duration_min,
-      priceLabel: s.price_label,
-    }));
+  const { data, error } = await getSupabase()
+    .from("services")
+    .select("id, name, duration_min, price_label")
+    .eq("active", true)
+    .order("sort_order")
+    .order("name")
+    .abortSignal(AbortSignal.timeout(REQUEST_TIMEOUT_MS));
+  if (error) throw new Error(`Lecture des prestations impossible : ${error.message}`);
+
+  const services = data.map((s) => ({
+    id: s.id,
+    name: s.name,
+    durationMin: s.duration_min,
+    priceLabel: s.price_label,
+  }));
+  // TODO: brancher Supabase. À retirer avec la fausse base (créneaux et réservation).
+  syncFakeServices(data);
+  return services;
 }
 
 /**

@@ -4,7 +4,7 @@ import { HeroVideo } from "@/components/HeroVideo";
 import { PageMeta } from "@/components/PageMeta";
 import { PhotoPlaceholder } from "@/components/PhotoPlaceholder";
 import { Section } from "@/components/Section";
-import { ErrorMessage, LoadingMessage } from "@/components/StatusMessage";
+import { EmptyMessage, ErrorMessage, LoadingMessage } from "@/components/StatusMessage";
 import { getServices } from "@/features/booking/data";
 import { useAsync } from "@/lib/useAsync";
 
@@ -77,10 +77,15 @@ export function HomePage() {
         )}
         {services.status === "error" && (
           <ErrorMessage onRetry={services.reload}>
-            Impossible de charger les prestations. Vérifie ta connexion, puis réessaie.
+            Impossible de charger les prestations pour le moment. Réessaie dans quelques instants.
           </ErrorMessage>
         )}
-        {services.status === "success" && (
+        {services.status === "success" && services.data.length === 0 && (
+          <EmptyMessage>
+            <p>Aucune prestation disponible pour l'instant.</p>
+          </EmptyMessage>
+        )}
+        {services.status === "success" && services.data.length > 0 && (
           <ul className="grid gap-4 sm:grid-cols-2">
             {services.data.map((service) => (
               <Card as="li" key={service.id}>

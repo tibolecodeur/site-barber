@@ -1,5 +1,6 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test, type Locator, type Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 /**
  * Parcours /reserver sur mobile (Android et iPhone), contre la fausse base de données

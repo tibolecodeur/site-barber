@@ -1,27 +1,55 @@
 -- =============================================================================
--- Données de DÉVELOPPEMENT LOCAL uniquement (appliquées par `supabase db reset`).
--- Jamais poussées sur le projet distant.
--- Le dépôt est public : AUCUNE vraie adresse ici. Les vraies adresses se saisissent depuis
--- l'admin (ou le dashboard), directement sur la base distante.
+-- Données de départ, à lancer À LA MAIN dans le SQL Editor de Supabase (projet distant).
+-- Aussi appliqué en local par `supabase db reset` (config.toml). seed-dev.sql n'est jamais
+-- dans config.toml : voir son en-tête.
+--
+-- Relançable sans risque (idempotent) : une ligne n'est ajoutée que si elle n'existe pas
+-- déjà (même id, même nom de prestation ou même libellé de lieu). Rien n'est jamais modifié
+-- ni supprimé : les vraies adresses saisies ensuite, ou les prestations modifiées depuis
+-- l'admin, ne sont pas écrasées par une nouvelle exécution. Attention : une ligne SUPPRIMÉE
+-- serait recréée (la masquer plutôt que la supprimer, ou ne plus relancer ce script).
+--
+-- Le dépôt est public : AUCUNE vraie adresse ici. Les adresses se saisissent dans le SQL
+-- Editor, directement sur la base distante.
+-- Contraintes respectées (migration …_tables.sql) : textes sans espace au bord ; nom et
+-- libellé de 1 à 80 caractères ; durée entre 15 et 240 min, multiple de 5 ; prix affiché en
+-- texte (pas de centimes), 40 caractères max ; adresse de 1 à 300 caractères.
 -- =============================================================================
 
--- Prestations (prix à confirmer avec le barber).
-insert into public.services (name, duration_min, price_label, sort_order) values
-  ('Coupe', 60, 'À confirmer', 1),
-  ('Coupe + barbe', 60, 'À confirmer', 2);
+begin;
 
--- Lieux, avec des adresses FACTICES.
-insert into public.locations (public_label, private_address, sort_order) values
-  ('Chez ses parents', '1 rue de l''Exemple, 00000 Villetest (adresse factice)', 1),
-  ('Chez lui', '2 avenue Fictive, 00000 Villetest (adresse factice)', 2);
+-- Prestations : 70 min, 12 € chacune.
+insert into public.services (id, name, duration_min, price_label, active, sort_order)
+select v.id, v.name, v.duration_min, v.price_label, true, v.sort_order
+from (
+  values
+    -- NOM À CONFIRMER AVEC ALIX
+    ('a11ce000-0000-4000-8000-000000000001'::uuid, 'Coupe', 70, '12 €', 1),
+    -- NOM À CONFIRMER AVEC ALIX
+    ('a11ce000-0000-4000-8000-000000000002'::uuid, 'Coupe + barbe', 70, '12 €', 2)
+) as v (id, name, duration_min, price_label, sort_order)
+where not exists (
+  select 1 from public.services s where s.id = v.id or s.name = v.name
+);
 
--- Disponibilités de test : les 7 prochains jours, 14 h–18 h heure de Paris, en alternant
--- les deux lieux. Calculées à partir de la date du jour pour rester toujours « à venir ».
-insert into public.availabilities (location_id, starts_at, ends_at)
-select
-  case when d % 2 = 0 then parents.id else lui.id end,
-  (((now() at time zone 'Europe/Paris')::date + d) + time '14:00') at time zone 'Europe/Paris',
-  (((now() at time zone 'Europe/Paris')::date + d) + time '18:00') at time zone 'Europe/Paris'
-from generate_series(1, 7) as d
-cross join (select id from public.locations where public_label = 'Chez ses parents') as parents
-cross join (select id from public.locations where public_label = 'Chez lui') as lui;
+-- Lieux : libellé public visible de tous. Créés INACTIFS, adresse « À RENSEIGNER » : l'adresse
+-- est révélée au client qui réserve, et un lieu inactif ne propose aucun créneau
+-- (private.compute_slots filtre sur l.active). On l'active en même temps que la saisie de la
+-- vraie adresse, dans le SQL Editor (jamais dans ce fichier, le dépôt est public) :
+--   update public.locations set private_address = '…', active = true where id = '…';
+--
+-- Les lieux d'un ancien seed (« Chez ses parents », « Chez lui », désactivés en production)
+-- ne sont ni réactivés ni recréés : ce script n'insère que les deux lieux ci-dessous et ne
+-- fait jamais d'update ni de delete.
+insert into public.locations (id, public_label, private_address, active, sort_order)
+select v.id, v.public_label, 'À RENSEIGNER', false, v.sort_order
+from (
+  values
+    ('a11ce000-0000-4000-8000-000000000101'::uuid, 'Angers', 1),
+    ('a11ce000-0000-4000-8000-000000000102'::uuid, 'Saint-Christophe-du-Bois', 2)
+) as v (id, public_label, sort_order)
+where not exists (
+  select 1 from public.locations l where l.id = v.id or l.public_label = v.public_label
+);
+
+commit;

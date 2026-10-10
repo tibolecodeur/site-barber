@@ -39,5 +39,12 @@ export default defineConfig({
     url: BASE_URL,
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,
+    // Valeurs FACTICES (le domaine .invalid n'existe jamais) : elles priment sur .env.local,
+    // Vite ne remplace pas une variable déjà définie. Les appels sont simulés par
+    // e2e/fixtures.ts ; sans elles, la CI (aucune variable) ne verrait que l'écran d'erreur.
+    env: {
+      VITE_SUPABASE_URL: "https://supabase-e2e.invalid",
+      VITE_SUPABASE_ANON_KEY: "cle-anon-factice-e2e",
+    },
   },
 });

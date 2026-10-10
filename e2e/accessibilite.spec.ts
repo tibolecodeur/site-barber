@@ -1,5 +1,5 @@
 import { AxeBuilder } from "@axe-core/playwright";
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures.ts";
 
 /**
  * Audit automatique axe (Deque) sur chaque route : règles WCAG 2.x niveaux A et AA.

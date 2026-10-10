@@ -52,7 +52,9 @@ npm ci        # installe exactement package-lock.json (dont la CLI Supabase)
 # Variables d'environnement : seule la clé « anon » (publique) va ici.
 cp .env.example .env.local
 # puis renseigner VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY
-# (Supabase > Project Settings > API)
+# (Supabase > Project Settings > API). Sans elles, le site démarre quand même et affiche
+# « Impossible de charger les prestations pour le moment ». Les tests n'en ont pas besoin :
+# Vitest les force à vide, Playwright utilise des valeurs factices et simule Supabase.
 
 # Navigateurs pour les tests end-to-end (Chromium = Android et desktop, WebKit = iPhone)
 npx playwright install chromium webkit
@@ -82,7 +84,8 @@ Base de données (CLI Supabase installée en devDependency, version figée) :
 | ---------------------------------- | -------------------------------------------------------- |
 | `npx supabase start`               | Lance Supabase en local (Docker), migrations + seed      |
 | `npx supabase db start`            | Postgres seul, plus rapide : suffit pour les tests pgTAP |
-| `npx supabase db reset`            | Recrée la base locale (migrations puis `seed.sql`)       |
+| `npx supabase db reset`            | Recrée la base locale (migrations, `seed.sql`)           |
+| `npm run db:reset:dev`             | Idem, puis `seed-dev.sql` (lieux actifs, dispos de test) |
 | `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée                        |
 | `npx supabase test db`             | Tests pgTAP (dont les accès interdits)                   |
 | `npx supabase stop`                | Arrête les conteneurs                                    |
@@ -119,7 +122,15 @@ conservation des données clients 6 mois.
 
 Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, admin,
 chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.
-`supabase/seed.sql` ne contient que des données de développement avec des **adresses factices**.
+`supabase/seed.sql` : prestations et lieux de départ, relançable sans doublon, à lancer à la main
+dans le SQL Editor du projet distant. Il n'insère que ce qui manque, ne modifie et ne supprime
+rien. Les lieux sont créés **inactifs**, adresse « À RENSEIGNER » (jamais de vraie adresse dans
+le dépôt) : on active chaque lieu en même temps que la saisie de son adresse.
+
+`supabase/seed-dev.sql` : lieux actifs avec adresse factice et disponibilités de test, pour la
+base **locale uniquement** (`npm run db:reset:dev`). Il n'est pas listé dans `config.toml`,
+donc `supabase db push --include-seed` ne peut pas l'embarquer, et il s'arrête de lui-même sur
+une base qui n'est pas une base locale neuve (compte, RDV, lieu ou adresse inconnus).
 
 ## Routes
 
@@ -151,8 +162,9 @@ src/
 │   ├── admin/        connexion, disponibilités, rendez-vous (data.ts)
 │   └── gallery/      affichage public des créations
 ├── lib/
-│   ├── supabase.ts   client Supabase unique
-│   ├── fakeDb.ts     fausse base en mémoire (maquette, avant branchement Supabase)
+│   ├── supabase.ts   client Supabase public (getSupabase, sans session)
+│   ├── database.types.ts  types des tables, écrits à la main d'après les migrations
+│   ├── fakeDb.ts     fausse base en mémoire (créneaux, réservation, admin : pas encore branchés)
 │   ├── dates.ts      dates : stockées en ISO, affichées en heure de Paris
 │   └── schemas.ts    schémas Zod partagés
 └── test/setup.ts     configuration des tests
@@ -161,7 +173,8 @@ e2e/                  tests Playwright
 supabase/
 ├── migrations/       toute évolution du schéma, versionnée
 ├── tests/            tests pgTAP (règles SQL, RLS, accès interdits)
-├── seed.sql          données de développement local (adresses factices)
+├── seed.sql          prestations et lieux de départ (adresses « À RENSEIGNER »)
+├── seed-dev.sql      disponibilités de test, base locale uniquement
 └── config.toml       configuration de la stack locale
 docs/                 SPEC, PLAN, DESIGN, ADR, TESTS-APPAREILS (checklist téléphones)
 .github/workflows/    CI (lint, types, tests, pgTAP, build, e2e)
