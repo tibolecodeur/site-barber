@@ -80,14 +80,15 @@ npm run dev   # http://localhost:5173
 
 Base de données (CLI Supabase installée en devDependency, version figée) :
 
-| Commande                           | Rôle                                                           |
-| ---------------------------------- | -------------------------------------------------------------- |
-| `npx supabase start`               | Lance Supabase en local (Docker), migrations + seed            |
-| `npx supabase db start`            | Postgres seul, plus rapide : suffit pour les tests pgTAP       |
-| `npx supabase db reset`            | Recrée la base locale (migrations, `seed.sql`, `seed-dev.sql`) |
-| `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée                              |
-| `npx supabase test db`             | Tests pgTAP (dont les accès interdits)                         |
-| `npx supabase stop`                | Arrête les conteneurs                                          |
+| Commande                           | Rôle                                                     |
+| ---------------------------------- | -------------------------------------------------------- |
+| `npx supabase start`               | Lance Supabase en local (Docker), migrations + seed      |
+| `npx supabase db start`            | Postgres seul, plus rapide : suffit pour les tests pgTAP |
+| `npx supabase db reset`            | Recrée la base locale (migrations, `seed.sql`)           |
+| `npm run db:reset:dev`             | Idem, puis `seed-dev.sql` (lieux actifs, dispos de test) |
+| `npx supabase migration new <nom>` | Nouvelle migration SQL versionnée                        |
+| `npx supabase test db`             | Tests pgTAP (dont les accès interdits)                   |
+| `npx supabase stop`                | Arrête les conteneurs                                    |
 
 ## Base de données
 
@@ -121,12 +122,15 @@ conservation des données clients 6 mois.
 
 Tests : `supabase/tests/` (pgTAP), un fichier par thème — schéma, anonyme, admin,
 chevauchements, `create_booking`, créneaux (dont le changement d'heure), tokens, Storage.
-`supabase/seed.sql` : prestations et lieux de départ (adresses « À RENSEIGNER », jamais de vraie
-adresse dans le dépôt), relançable sans doublon, à lancer à la main dans le SQL Editor du projet
-distant. `supabase/seed-dev.sql` : disponibilités de test, pour la base **locale uniquement**.
+`supabase/seed.sql` : prestations et lieux de départ, relançable sans doublon, à lancer à la main
+dans le SQL Editor du projet distant. Il n'insère que ce qui manque, ne modifie et ne supprime
+rien. Les lieux sont créés **inactifs**, adresse « À RENSEIGNER » (jamais de vraie adresse dans
+le dépôt) : on active chaque lieu en même temps que la saisie de son adresse.
 
-> ⚠️ Ne jamais utiliser `supabase db push --include-seed` : `seed-dev.sql` partirait sur le
-> projet distant (il s'arrête de lui-même sur une base qui a déjà un admin ou des RDV).
+`supabase/seed-dev.sql` : lieux actifs avec adresse factice et disponibilités de test, pour la
+base **locale uniquement** (`npm run db:reset:dev`). Il n'est pas listé dans `config.toml`,
+donc `supabase db push --include-seed` ne peut pas l'embarquer, et il s'arrête de lui-même sur
+une base qui n'est pas une base locale neuve (compte, RDV, lieu ou adresse inconnus).
 
 ## Routes
 

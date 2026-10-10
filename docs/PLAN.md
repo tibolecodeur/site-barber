@@ -50,6 +50,10 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
       tests Vitest (client simulé) et Playwright (Supabase intercepté par `e2e/fixtures.ts`).
 - [ ] **À faire à la main** : lancer `supabase/seed.sql` dans le SQL Editor du projet distant,
       puis vérifier /reserver avec `.env.local` renseigné. Noms et prix à confirmer avec Alix.
+      Avant la première dispo : saisir l'adresse de chaque lieu ET l'activer dans la même requête
+      (les lieux du seed sont créés inactifs).
+- [x] Revue sécurité : lieux du seed inactifs, `seed-dev.sql` retiré de `config.toml`
+      (`npm run db:reset:dev` en local) avec une garde renforcée.
 - [ ] Brancher le reste sur Supabase : créneaux (`get_available_slots`), réservation
       (`create_booking`), consultation et annulation (`get_booking`, `cancel_booking`), puis
       supprimer le pont provisoire `syncFakeServices` et `src/lib/fakeDb.ts`.

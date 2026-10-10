@@ -85,6 +85,11 @@ Décisions de design validées : @docs/DESIGN.md
 - Seule la clé `anon` va dans le front (`VITE_SUPABASE_ANON_KEY`). La clé `service_role` n'apparaît
   jamais dans `src/` ni dans un commit.
 - Anti-spam sur le formulaire : champ honeypot + limite de réservations par téléphone/email.
+- Seeds : `supabase/seed.sql` n'insère que ce qui manque (jamais d'`update` ni de `delete`),
+  crée les lieux **inactifs** avec l'adresse « À RENSEIGNER », et ne touche jamais aux anciens
+  lieux de production (« Chez ses parents », « Chez lui », désactivés). `supabase/seed-dev.sql`
+  (local uniquement) n'est JAMAIS listé dans `config.toml` ; on le lance par
+  `npm run db:reset:dev`. Ne jamais utiliser `supabase db push --include-seed`.
 
 ## Design
 

@@ -1,6 +1,7 @@
 -- =============================================================================
 -- Données de départ, à lancer À LA MAIN dans le SQL Editor de Supabase (projet distant).
--- Aussi appliqué en local par `supabase db reset` (config.toml, avant seed-dev.sql).
+-- Aussi appliqué en local par `supabase db reset` (config.toml). seed-dev.sql n'est jamais
+-- dans config.toml : voir son en-tête.
 --
 -- Relançable sans risque (idempotent) : une ligne n'est ajoutée que si elle n'existe pas
 -- déjà (même id, même nom de prestation ou même libellé de lieu). Rien n'est jamais modifié
@@ -31,11 +32,17 @@ where not exists (
   select 1 from public.services s where s.id = v.id or s.name = v.name
 );
 
--- Lieux : libellé public visible de tous ; adresse privée À RENSEIGNER à la main dans le
--- SQL Editor (elle est révélée au client qui réserve : à remplir AVANT d'ouvrir les
--- réservations).
+-- Lieux : libellé public visible de tous. Créés INACTIFS, adresse « À RENSEIGNER » : l'adresse
+-- est révélée au client qui réserve, et un lieu inactif ne propose aucun créneau
+-- (private.compute_slots filtre sur l.active). On l'active en même temps que la saisie de la
+-- vraie adresse, dans le SQL Editor (jamais dans ce fichier, le dépôt est public) :
+--   update public.locations set private_address = '…', active = true where id = '…';
+--
+-- Les lieux d'un ancien seed (« Chez ses parents », « Chez lui », désactivés en production)
+-- ne sont ni réactivés ni recréés : ce script n'insère que les deux lieux ci-dessous et ne
+-- fait jamais d'update ni de delete.
 insert into public.locations (id, public_label, private_address, active, sort_order)
-select v.id, v.public_label, 'À RENSEIGNER', true, v.sort_order
+select v.id, v.public_label, 'À RENSEIGNER', false, v.sort_order
 from (
   values
     ('a11ce000-0000-4000-8000-000000000101'::uuid, 'Angers', 1),
