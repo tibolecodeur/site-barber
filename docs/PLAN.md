@@ -13,7 +13,7 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
       _(modèle de PR fait ; le reste est à faire à la main sur GitHub)_
 - [x] CI GitHub Actions (lint, typecheck, tests, build, e2e) · README · ADR 0001 (choix de stack)
 - [x] Pages vides et navigation (accueil, prestations, galerie, réserver, admin)
-- [ ] Déployé sur Vercel
+- [ ] Déployé (Cloudflare Pages, plus tard : rien n'est en ligne pour l'instant)
 
 ## Phase 2 — Base de données et sécurité
 
@@ -26,8 +26,8 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 - [x] Règles confirmées avec le barber (consigne 14) : créneaux de 70 min, réservation au plus
       tard 48 h avant, 4 semaines, annulation jusqu'à 24 h avant, 2 RDV futurs ; contrainte
       « pas d'adresse provisoire sur un lieu actif » ; anon limité aux colonnes d'affichage de
-      `services`. Appliqué en local ; en production, **déployer le front AVANT le `db push`**
-      (l'ancien front filtre sur `active`, que anon ne pourra plus lire : /reserver tomberait).
+      `services`. Appliqué en local. Ordre pour la base de production : fusionner la PR (le
+      front n'utilise plus `.eq("active", true)`), PUIS appliquer la migration (`db push`).
 - [ ] Conservation des données clients (6 mois) à confirmer avec le barber
 
 ## Phase 3 — Identité visuelle
@@ -98,8 +98,8 @@ dans Claude Code). Claude coche les cases quand une étape est terminée et vali
 - [ ] **`<meta name="robots" content="noindex">` sur `/admin`, `/annuler` et la 404**
       (prop à ajouter à `PageMeta`). **À faire avant la mise en ligne de la réservation.**
 - [ ] **`referrer: no-referrer` sur `/annuler`** : l'URL contient le `cancel_token`, il ne doit
-      pas partir vers un autre site via l'en-tête Referer (balise meta et/ou en-tête HTTP dans
-      `vercel.json`). **À faire avant la mise en ligne de la réservation.**
+      pas partir vers un autre site via l'en-tête Referer (balise meta et/ou en-tête HTTP de
+      l'hébergeur, Cloudflare Pages : fichier `_headers`). **À faire avant la mise en ligne de la réservation.**
 - [ ] Formulaire : `required` (ou équivalent via Zod / react-hook-form) et zones `aria-live`
       pour les créneaux, les erreurs et la confirmation _(reporté depuis le squelette des pages)_
 - [ ] Accessibilité : déplacer le focus (h1 ou `main`) après un changement de page, pour que
