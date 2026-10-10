@@ -80,7 +80,7 @@ export const FAKE_CANCEL_TOKENS = {
   valid: "11111111-1111-4111-8111-111111111111",
   /** RDV déjà annulé. */
   cancelled: "22222222-2222-4222-8222-222222222222",
-  /** RDV qui commence dans moins de 2 h : trop tard pour annuler. */
+  /** RDV qui commence dans moins de 24 h : trop tard pour annuler. */
   tooLate: "33333333-3333-4333-8333-333333333333",
 } as const;
 
@@ -90,18 +90,18 @@ const SERVICE_IDS = {
 };
 
 const LOCATION_IDS = {
-  parents: "10c00000-0000-4000-8000-000000000001",
-  home: "10c00000-0000-4000-8000-000000000002",
+  locationA: "10c00000-0000-4000-8000-000000000001",
+  locationB: "10c00000-0000-4000-8000-000000000002",
 };
 
 /** Plages publiées chaque semaine, par jour ISO (2 = mardi…). Dimanche et lundi : rien. */
 const WEEKLY_AVAILABILITIES: Record<number, { from: string; to: string; locationId: string }[]> = {
-  2: [{ from: "14:00", to: "18:00", locationId: LOCATION_IDS.home }],
-  3: [{ from: "17:00", to: "20:00", locationId: LOCATION_IDS.parents }],
-  5: [{ from: "17:00", to: "20:00", locationId: LOCATION_IDS.home }],
+  2: [{ from: "14:00", to: "18:00", locationId: LOCATION_IDS.locationB }],
+  3: [{ from: "17:00", to: "20:00", locationId: LOCATION_IDS.locationA }],
+  5: [{ from: "17:00", to: "20:00", locationId: LOCATION_IDS.locationB }],
   6: [
-    { from: "10:00", to: "13:00", locationId: LOCATION_IDS.parents },
-    { from: "14:00", to: "18:00", locationId: LOCATION_IDS.home },
+    { from: "10:00", to: "13:00", locationId: LOCATION_IDS.locationA },
+    { from: "14:00", to: "18:00", locationId: LOCATION_IDS.locationB },
   ],
 };
 
@@ -130,7 +130,7 @@ function seed(now: Date): FakeDb {
     // Aujourd'hui : une grande plage, pour que le tableau de bord admin ait des RDV du jour.
     const ranges =
       offset === 0
-        ? [{ from: "09:00", to: "21:00", locationId: LOCATION_IDS.home }]
+        ? [{ from: "09:00", to: "21:00", locationId: LOCATION_IDS.locationB }]
         : (WEEKLY_AVAILABILITIES[isoWeekday(day)] ?? []);
     for (const range of ranges) {
       availabilities.push({
@@ -148,7 +148,7 @@ function seed(now: Date): FakeDb {
   ): BookingRow => ({
     id: randomUuid(),
     service_id: SERVICE_IDS.cut,
-    location_id: LOCATION_IDS.home,
+    location_id: LOCATION_IDS.locationB,
     ends_at: plusHour(fields.starts_at),
     status: "confirmed",
     cancel_token: randomUuid(),
@@ -156,7 +156,7 @@ function seed(now: Date): FakeDb {
     ...fields,
   });
 
-  // RDV qui commence à la prochaine heure pile : moins de 2 h, donc plus annulable.
+  // RDV qui commence à la prochaine heure pile : moins de 24 h, donc plus annulable.
   const nextHour = new Date(Math.ceil((now.getTime() + 1) / HOUR_MS) * HOUR_MS).toISOString();
   const tooLate = booking({
     starts_at: nextHour,
@@ -173,7 +173,7 @@ function seed(now: Date): FakeDb {
     tooLate,
     booking({
       starts_at: at(saturday, "10:00"),
-      location_id: LOCATION_IDS.parents,
+      location_id: LOCATION_IDS.locationA,
       service_id: SERVICE_IDS.cutAndBeard,
       first_name: "Lucas",
       last_name: "Martin",
@@ -182,7 +182,7 @@ function seed(now: Date): FakeDb {
       cancel_token: FAKE_CANCEL_TOKENS.valid,
     }),
     booking({
-      starts_at: at(tuesday, "15:00"),
+      starts_at: at(tuesday, "15:10"), // grille de 70 min : 14:00, 15:10, 16:20
       first_name: "Inès",
       last_name: "Petit",
       phone: null,
@@ -191,7 +191,7 @@ function seed(now: Date): FakeDb {
       cancel_token: FAKE_CANCEL_TOKENS.cancelled,
     }),
     booking({
-      starts_at: at(tuesday, "16:00"),
+      starts_at: at(tuesday, "16:20"),
       first_name: "Yanis",
       last_name: "Robert",
       phone: "0639980003",
@@ -239,15 +239,15 @@ function seed(now: Date): FakeDb {
     // Adresses fictives : aucune vraie adresse dans le dépôt (docs/SPEC.md).
     locations: [
       {
-        id: LOCATION_IDS.parents,
-        public_label: "Chez ses parents",
+        id: LOCATION_IDS.locationA,
+        public_label: "Angers",
         private_address: "1 rue de l'Exemple, 00000 Ville (adresse fictive)",
         active: true,
         sort_order: 1,
       },
       {
-        id: LOCATION_IDS.home,
-        public_label: "Chez lui",
+        id: LOCATION_IDS.locationB,
+        public_label: "Saint-Christophe-du-Bois",
         private_address: "2 avenue de la Démo, 00000 Ville (adresse fictive)",
         active: true,
         sort_order: 2,

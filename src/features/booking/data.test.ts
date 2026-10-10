@@ -28,17 +28,19 @@ function mockSupabase(result: FakeQueryResult) {
 }
 
 /**
- * Horloge figée : mardi 13 octobre 2026, 8 h à Paris. Données de démonstration (fakeDb) :
- * aujourd'hui dispo 9 h–21 h « Chez lui », RDV à 9 h (trop tard), 11 h et 19 h ;
- * mardi 20 : dispo 14 h–18 h, RDV annulé à 15 h, RDV confirmé à 16 h.
+ * Horloge figée : mardi 13 octobre 2026, 8 h à Paris. Règles : grille de 70 min, au moins 48 h
+ * à l'avance (donc rien avant jeudi 15, 8 h), annulation jusqu'à 24 h avant.
+ * Données de démonstration (fakeDb) : aujourd'hui dispo 9 h–21 h « Saint-Christophe-du-Bois »,
+ * RDV à 9 h (trop tard), 11 h et 19 h ; vendredi 16 : 17 h–20 h ; mardi 20 : dispo 14 h–18 h,
+ * RDV annulé à 15 h 10, RDV confirmé à 16 h 20.
  */
 const NOW = new Date("2026-10-13T06:00:00Z");
 const TODAY = "2026-10-13";
 const NEXT_TUESDAY = "2026-10-20";
 
 let cutId: string;
-/** Lieu « Chez lui », lu sur les créneaux comme le ferait l'écran. */
-let homeId: string;
+/** Lieu « Saint-Christophe-du-Bois », lu sur les créneaux comme le ferait l'écran. */
+let locationBId: string;
 
 beforeEach(async () => {
   // Seul `Date` est simulé : les promesses et les timers restent réels.
@@ -47,7 +49,7 @@ beforeEach(async () => {
   resetFakeDb(NOW);
   // Créneaux et réservation sont encore factices : on lit la prestation dans la fausse base.
   cutId = fakeDb().services[0]!.id;
-  homeId = (await getAvailableSlots(cutId, NEXT_TUESDAY))[0]!.locationId;
+  locationBId = (await getAvailableSlots(cutId, NEXT_TUESDAY))[0]!.locationId;
 });
 
 afterEach(() => {
@@ -58,7 +60,7 @@ function bookingInput(overrides: Partial<NewBooking> = {}): NewBooking {
   return {
     serviceId: cutId,
     startsAt: "2026-10-20T12:00:00.000Z", // mardi 20, 14 h à Paris
-    locationId: homeId,
+    locationId: locationBId,
     firstName: " Zoé ",
     lastName: "Durand",
     phone: "06 39 98 00 10",
@@ -72,7 +74,7 @@ async function expectBookingError(promise: Promise<unknown>, code: string) {
 }
 
 describe("getServices", () => {
-  it("lit les prestations actives, triées, avec les seules colonnes utiles", async () => {
+  it("lit les prestations triées, avec les seules colonnes lisibles par anon, sans filtre active", async () => {
     const calls = mockSupabase({ data: SERVICE_ROWS, error: null });
 
     expect(await getServices()).toEqual([
@@ -82,7 +84,6 @@ describe("getServices", () => {
     expect(calls.map(({ method, args }) => [method, ...args])).toEqual([
       ["from", "services"],
       ["select", "id, name, duration_min, price_label"],
-      ["eq", "active", true],
       ["order", "sort_order"],
       ["order", "name"],
       ["abortSignal", expect.any(AbortSignal)],
@@ -123,48 +124,54 @@ describe("getServices", () => {
 });
 
 describe("getAvailableSlots", () => {
-  it("découpe la dispo toutes les 60 min, sans les créneaux à moins de 2 h ni les RDV pris", async () => {
-    const slots = await getAvailableSlots(cutId, TODAY);
-    expect(slots.map((s) => formatTime(s.startsAt))).toEqual([
-      "10:00",
-      "12:00",
-      "13:00",
-      "14:00",
-      "15:00",
-      "16:00",
-      "17:00",
-      "18:00",
-      "20:00",
-    ]);
+  it("ne propose rien à moins de 48 h", async () => {
+    expect(await getAvailableSlots(cutId, TODAY)).toEqual([]);
+    expect(await getAvailableSlots(cutId, "2026-10-14")).toEqual([]); // mercredi 17 h–20 h
+  });
+
+  it("découpe la dispo toutes les 70 min depuis son début, créneaux entiers dans la dispo", async () => {
+    // Vendredi 16, 17 h–20 h : 17:00, 18:10 ; 19:20 finirait à 20:20, hors dispo.
+    const slots = await getAvailableSlots(cutId, "2026-10-16");
+    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["17:00", "18:10"]);
     // Forme exacte : le lieu (id + libellé public) vient avec le créneau, jamais l'adresse.
     expect(slots[0]).toEqual({
-      startsAt: "2026-10-13T08:00:00.000Z",
-      endsAt: "2026-10-13T09:00:00.000Z",
-      locationId: homeId,
-      locationLabel: "Chez lui",
+      startsAt: "2026-10-16T15:00:00.000Z",
+      endsAt: "2026-10-16T16:00:00.000Z",
+      locationId: locationBId,
+      locationLabel: "Saint-Christophe-du-Bois",
     });
   });
 
+  it("propose un créneau à 48 h pile, plus à 47 h 59", async () => {
+    vi.setSystemTime(new Date("2026-10-14T15:00:00Z")); // mercredi 14, 17 h à Paris
+    expect(
+      (await getAvailableSlots(cutId, "2026-10-16")).map((s) => formatTime(s.startsAt)),
+    ).toEqual(["17:00", "18:10"]);
+    vi.setSystemTime(new Date("2026-10-14T15:01:00Z"));
+    expect(
+      (await getAvailableSlots(cutId, "2026-10-16")).map((s) => formatTime(s.startsAt)),
+    ).toEqual(["18:10"]);
+  });
+
   it("donne à chaque créneau le lieu de sa dispo, plusieurs lieux le même jour", async () => {
-    // Samedi 17 : 10 h–13 h « Chez ses parents » (10 h déjà pris), 14 h–18 h « Chez lui ».
+    // Samedi 17 : 10 h–13 h « Angers » (10 h déjà pris ; 12:20 déborderait),
+    // 14 h–18 h « Saint-Christophe-du-Bois ».
     const slots = await getAvailableSlots(cutId, "2026-10-17");
     expect(slots.map((s) => [formatTime(s.startsAt), s.locationLabel])).toEqual([
-      ["11:00", "Chez ses parents"],
-      ["12:00", "Chez ses parents"],
-      ["14:00", "Chez lui"],
-      ["15:00", "Chez lui"],
-      ["16:00", "Chez lui"],
-      ["17:00", "Chez lui"],
+      ["11:10", "Angers"],
+      ["14:00", "Saint-Christophe-du-Bois"],
+      ["15:10", "Saint-Christophe-du-Bois"],
+      ["16:20", "Saint-Christophe-du-Bois"],
     ]);
-    const parentsId = slots[0]!.locationId;
-    expect(parentsId).not.toBe(homeId);
-    expect(slots.filter((s) => s.locationId === parentsId)).toHaveLength(2);
+    const locationAId = slots[0]!.locationId;
+    expect(locationAId).not.toBe(locationBId);
+    expect(slots.filter((s) => s.locationId === locationAId)).toHaveLength(1);
     expect(JSON.stringify(slots)).not.toMatch(/fictive/);
   });
 
   it("libère le créneau d'un RDV annulé", async () => {
     const slots = await getAvailableSlots(cutId, NEXT_TUESDAY);
-    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["14:00", "15:00", "17:00"]);
+    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["14:00", "15:10"]);
   });
 
   it("renvoie une liste vide sans dispo, au-delà de l'horizon ou pour une prestation inconnue", async () => {
@@ -182,13 +189,13 @@ describe("createBooking", () => {
       startsAt: "2026-10-20T12:00:00.000Z",
       endsAt: "2026-10-20T13:00:00.000Z",
       serviceName: "Coupe",
-      locationLabel: "Chez lui",
+      locationLabel: "Saint-Christophe-du-Bois",
       privateAddress: expect.stringContaining("fictive"),
       cancelToken: expect.any(String),
     });
     expect(isUuid(receipt.cancelToken)).toBe(true);
     const slots = await getAvailableSlots(cutId, NEXT_TUESDAY);
-    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["15:00", "17:00"]);
+    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["15:10"]);
 
     const details = await getBooking(receipt.cancelToken);
     expect(details).toMatchObject({ status: "confirmed", firstName: "Zoé", canCancel: true });
@@ -207,9 +214,9 @@ describe("createBooking", () => {
   });
 
   it("refuse un lieu qui n'est pas celui du créneau (dispo changée de lieu entre-temps)", async () => {
-    const parentsId = (await getAvailableSlots(cutId, "2026-10-17"))[0]!.locationId;
+    const locationAId = (await getAvailableSlots(cutId, "2026-10-17"))[0]!.locationId;
     await expectBookingError(
-      createBooking(bookingInput({ locationId: parentsId })),
+      createBooking(bookingInput({ locationId: locationAId })),
       "slot_unavailable",
     );
     await expectBookingError(
@@ -218,7 +225,7 @@ describe("createBooking", () => {
     );
     // Le créneau reste libre : rien n'a été réservé.
     const slots = await getAvailableSlots(cutId, NEXT_TUESDAY);
-    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["14:00", "15:00", "17:00"]);
+    expect(slots.map((s) => formatTime(s.startsAt))).toEqual(["14:00", "15:10"]);
   });
 
   it("refuse un créneau trop proche ou trop lointain", async () => {
@@ -256,7 +263,7 @@ describe("createBooking", () => {
     // Le 06 39 98 00 02 a déjà un RDV (Lucas, samedi).
     await createBooking(bookingInput({ phone: "+33 6 39 98 00 02" }));
     await expectBookingError(
-      createBooking(bookingInput({ startsAt: "2026-10-20T15:00:00.000Z", phone: "0639980002" })),
+      createBooking(bookingInput({ startsAt: "2026-10-20T13:10:00.000Z", phone: "0639980002" })),
       "limit_reached",
     );
   });
@@ -266,7 +273,7 @@ describe("createBooking", () => {
     await expectBookingError(
       createBooking(
         bookingInput({
-          startsAt: "2026-10-20T15:00:00.000Z",
+          startsAt: "2026-10-20T13:10:00.000Z", // mardi 15 h 10
           phone: "",
           email: "LUCAS.MARTIN@example.com",
         }),
@@ -283,7 +290,7 @@ describe("getBooking", () => {
       startsAt: "2026-10-17T08:00:00.000Z",
       endsAt: "2026-10-17T09:00:00.000Z",
       serviceName: "Coupe + barbe",
-      locationLabel: "Chez ses parents",
+      locationLabel: "Angers",
       privateAddress: expect.stringContaining("fictive"),
       firstName: "Lucas",
       canCancel: true,
@@ -298,7 +305,7 @@ describe("getBooking", () => {
     });
   });
 
-  it("n'autorise plus l'annulation à moins de 2 h", async () => {
+  it("n'autorise plus l'annulation à moins de 24 h", async () => {
     expect(await getBooking(FAKE_CANCEL_TOKENS.tooLate)).toMatchObject({
       status: "confirmed",
       canCancel: false,
@@ -319,7 +326,7 @@ describe("cancelBooking", () => {
     expect(await cancelBooking(FAKE_CANCEL_TOKENS.valid)).toBe(false);
   });
 
-  it("refuse à moins de 2 h du RDV (too_late)", async () => {
+  it("refuse à moins de 24 h du RDV (too_late)", async () => {
     await expectBookingError(cancelBooking(FAKE_CANCEL_TOKENS.tooLate), "too_late");
   });
 

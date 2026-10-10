@@ -29,7 +29,7 @@ test("lien valide : détail du RDV, puis annulation", async ({ page }) => {
     page.getByRole("heading", { level: 2, name: "Lucas, ton rendez-vous" }),
   ).toBeVisible();
   await expect(page.getByText("Coupe + barbe")).toBeVisible();
-  await expect(page.getByText("Chez ses parents")).toBeVisible();
+  await expect(page.getByText("Angers")).toBeVisible();
   await expect(page.getByText(/adresse fictive/)).toBeVisible();
   await expectNoAxeViolation(page);
 
@@ -50,13 +50,13 @@ test("RDV déjà annulé", async ({ page }) => {
   await expectNoAxeViolation(page);
 });
 
-test("trop tard : moins de 2 h avant le RDV", async ({ page }) => {
+test("trop tard : moins de 24 h avant le RDV", async ({ page }) => {
   await page.goto(`/annuler?token=${TOKENS.tooLate}`);
 
   await expect(
     page.getByRole("heading", { level: 2, name: "Trop tard pour annuler en ligne" }),
   ).toBeVisible();
-  await expect(page.getByText(/jusqu'à 2 h avant/)).toBeVisible();
+  await expect(page.getByText(/jusqu'à 24 h avant/)).toBeVisible();
   await expect(page.getByRole("button", { name: "Annuler mon rendez-vous" })).toHaveCount(0);
   // L'adresse n'est pas rappelée dans cet état.
   await expect(page.getByText(/adresse fictive/)).toHaveCount(0);

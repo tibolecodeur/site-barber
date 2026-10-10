@@ -68,7 +68,7 @@ describe("BookingPage : chargement et erreurs", () => {
           startsAt: "2030-01-15T13:00:00.000Z",
           endsAt: "2030-01-15T14:00:00.000Z",
           locationId: "l1",
-          locationLabel: "Chez lui",
+          locationLabel: "Saint-Christophe-du-Bois",
         },
       ]);
     renderPage();
@@ -83,7 +83,7 @@ describe("BookingPage : chargement et erreurs", () => {
     await user.click(screen.getByRole("button", { name: "Réessayer" }));
     // Le créneau affiche le libellé public de son lieu.
     expect(
-      await screen.findByRole("radio", { name: /14:00 – 15:00\s*Chez lui/ }),
+      await screen.findByRole("radio", { name: /14:00 – 15:00\s*Saint-Christophe-du-Bois/ }),
     ).toBeInTheDocument();
   });
 });

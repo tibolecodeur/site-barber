@@ -6,7 +6,8 @@ import { expect, test } from "./fixtures.ts";
  * Parcours /reserver sur mobile (Android et iPhone), contre la fausse base de données
  * (src/lib/fakeDb.ts) : ses dispos sont recalculées à partir d'aujourd'hui à chaque chargement.
  * Dispos de démonstration : aujourd'hui 9 h–21 h, puis mardi, mercredi, vendredi, samedi ;
- * rien le dimanche ni le lundi.
+ * rien le dimanche ni le lundi. Règles : grille de 70 min, rien à moins de 48 h (aujourd'hui
+ * et demain n'ont donc jamais de créneau).
  */
 test.skip(({ isMobile }) => !isMobile, "Parcours testé sur les projets mobiles");
 
@@ -63,7 +64,7 @@ async function texteDuCreneau(creneau: Locator): Promise<string> {
   return creneau.evaluate((el) => el.closest("label")!.textContent!.replace(/\s+/g, " ").trim());
 }
 
-const LIEU_EN_FIN = /(Chez lui|Chez ses parents)$/;
+const LIEU_EN_FIN = /(Saint-Christophe-du-Bois|Angers)$/;
 
 test("parcours complet : réserver, puis annuler avec le lien personnel", async ({ page }) => {
   const erreurs: string[] = [];
@@ -186,24 +187,23 @@ test("aucun créneau un lundi ; chaque créneau affiche son lieu, jamais l'adres
   await continuer(page);
   await expect(page.getByText("Choisis un créneau.")).toBeVisible();
 
-  // Le samedi, deux dispos dans deux lieux : 10 h–13 h « Chez ses parents », 14 h–18 h
-  // « Chez lui ». Chaque créneau porte le lieu de SA dispo.
+  // Le samedi, deux dispos dans deux lieux : 10 h–13 h « Angers », 14 h–18 h
+  // « Saint-Christophe-du-Bois ». Chaque créneau porte le lieu de SA dispo. Grille de 70 min
+  // depuis le début de chaque dispo (prestation de 60 min) : 12:20 et 17:30 déborderaient.
   await toucherJour(page.getByRole("radio", { name: /^samedi / }).last());
   const creneaux = page.getByRole("group", { name: /^Créneaux libres le samedi/ });
-  await expect(creneaux.getByRole("radio")).toHaveCount(7);
+  await expect(creneaux.getByRole("radio")).toHaveCount(5);
   const textes = await creneaux
     .getByRole("radio")
     .evaluateAll((els) =>
       els.map((el) => el.closest("label")!.textContent!.replace(/\s+/g, " ").trim()),
     );
   expect(textes).toEqual([
-    "10:00 – 11:00Chez ses parents",
-    "11:00 – 12:00Chez ses parents",
-    "12:00 – 13:00Chez ses parents",
-    "14:00 – 15:00Chez lui",
-    "15:00 – 16:00Chez lui",
-    "16:00 – 17:00Chez lui",
-    "17:00 – 18:00Chez lui",
+    "10:00 – 11:00Angers",
+    "11:10 – 12:10Angers",
+    "14:00 – 15:00Saint-Christophe-du-Bois",
+    "15:10 – 16:10Saint-Christophe-du-Bois",
+    "16:20 – 17:20Saint-Christophe-du-Bois",
   ]);
   await expect(creneaux).not.toContainText("fictive");
 
